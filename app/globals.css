@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --naclos-primary: #1a1a1a;
+  --naclos-accent: #d92d20;
+}
+
+/* Larger tap targets for fast mobile input in-store */
+input, button, select {
+  font-size: 16px; /* prevents iOS auto-zoom on focus */
+}
