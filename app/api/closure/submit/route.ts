@@ -5,6 +5,7 @@ import { computeClosureTotals } from '@/lib/calculations';
 import type { DailyClosureInput } from '@/types';
 
 const expenseSchema = z.object({
+  categoryCode: z.string().optional().default('general'),
   label: z.string().min(1),
   amount: z.number().min(0),
 });
@@ -39,6 +40,7 @@ const closureInputSchema = z.object({
   managerName: z.string().min(1),
   receiptImageUrl: z.string().nullable().optional(),
   grossRevenue: z.number().min(0),
+  notes: z.string().optional().default(''),
   expenses: z.array(expenseSchema).optional().default([]),
   staffAdvances: z.array(advanceSchema).optional().default([]),
   inventory: z.array(inventorySchema).optional().default([]),
@@ -46,7 +48,7 @@ const closureInputSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  let payload: DailyClosureInput & { receiptImageUrl?: string | null };
+  let payload: DailyClosureInput & { receiptImageUrl?: string | null; notes?: string };
   let rawJson: any;
 
   try {
@@ -116,7 +118,7 @@ export async function POST(request: NextRequest) {
       net_cash: totals.netCash,
       net_profit: totals.netProfit,
       has_inventory_discrepancy: totals.hasInventoryDiscrepancy,
-      discrepancy_summary: totals.discrepancySummary,
+      discrepancy_summary: payload.notes || totals.discrepancySummary,
       status: 'submitted',
       submitted_at: new Date().toISOString(),
     })
@@ -237,7 +239,7 @@ export async function POST(request: NextRequest) {
       closure_id: closureId,
       actor: payload.managerName,
       action: 'submit',
-      detail: { hasInventoryDiscrepancy: totals.hasInventoryDiscrepancy },
+      detail: { hasInventoryDiscrepancy: totals.hasInventoryDiscrepancy, notes: payload.notes },
     });
 
     // 5. Trigger Email Report asynchronously
