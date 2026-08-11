@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
   const [pdfBuffer, xlsxBuffer] = await Promise.all([
     generateDailyReportPdfBuffer(closure, inventoryFlags),
-    generateDailyExcelBuffer(closure), // pass an existing monthly workbook buffer here to append instead of starting fresh
+    generateDailyExcelBuffer(closure),
   ]);
 
   const recipients = [process.env.REPORT_RECIPIENT_OWNER, process.env.REPORT_RECIPIENT_PARTNER].filter(
@@ -123,6 +123,7 @@ async function loadFullClosureRecord(supabase: ReturnType<typeof getSupabaseAdmi
     netCash: Number(closure.net_cash),
     netProfit: Number(closure.net_profit),
     status: closure.status,
+    receiptImageUrl: closure.receipt_image_url ?? null,
     hasInventoryDiscrepancy: closure.has_inventory_discrepancy,
     discrepancySummary: closure.discrepancy_summary,
     submittedAt: closure.submitted_at,
@@ -172,35 +173,98 @@ function buildEmailHtml(closure: DailyClosureRecord, flags: ReturnType<typeof bu
          ✓ Aucun écart de stock détecté aujourd'hui.
        </div>`;
 
-  return `
-  <div style="font-family:Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;">
-    <h2 style="margin-bottom:4px;">Naclos Operations & Audit Portal</h2>
-    <p style="color:#666;margin-top:0;">Rapport de clôture — ${closure.businessDate} · Responsable: ${closure.managerName}</p>
+  const expensesHtml = closure.expenses && closure.expenses.length > 0
+    ? `<table width="100%" style="border-collapse:collapse;margin-top:10px;font-size:13px;">
+         <thead>
+           <tr style="background:#f5f5f5;text-align:left;">
+             <th style="padding:8px;border-bottom:1px solid #ddd;">Libellé</th>
+             <th style="padding:8px;border-bottom:1px solid #ddd;text-align:right;">Montant</th>
+           </tr>
+         </thead>
+         <tbody>
+           ${closure.expenses
+             .map(
+               (e) => `
+             <tr>
+               <td style="padding:8px;border-bottom:1px solid #eee;">${e.label}</td>
+               <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;font-weight:bold;color:#d92d20;">${money(e.amount)}</td>
+             </tr>`
+             )
+             .join('')}
+         </tbody>
+       </table>`
+    : `<p style="font-size:13px;color:#777;font-style:italic;">Aucune dépense enregistrée aujourd'hui.</p>`;
 
-    <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+  const stockHtml = closure.inventory && closure.inventory.length > 0
+    ? `<table width="100%" style="border-collapse:collapse;margin-top:10px;font-size:13px;">
+         <thead>
+           <tr style="background:#f5f5f5;text-align:left;">
+             <th style="padding:8px;border-bottom:1px solid #ddd;">Article</th>
+             <th style="padding:8px;border-bottom:1px solid #ddd;text-align:right;">Stock Réel Compté</th>
+           </tr>
+         </thead>
+         <tbody>
+           ${closure.inventory
+             .map(
+               (i) => `
+             <tr>
+               <td style="padding:8px;border-bottom:1px solid #eee;">${i.materialLabel || i.materialCode || 'Article'}</td>
+               <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;font-weight:bold;">${i.physicalClosingCount} ${i.unit || ''}</td>
+             </tr>`
+             )
+             .join('')}
+         </tbody>
+       </table>`
+    : `<p style="font-size:13px;color:#777;font-style:italic;">Aucune donnée de stock enregistrée.</p>`;
+
+  const receiptHtml = (closure as any).receiptImageUrl
+    ? `<div style="margin-top:20px;">
+         <h3 style="font-size:14px;border-bottom:1px solid #eee;padding-bottom:6px;margin-bottom:10px;">Justificatif / Reçu Image</h3>
+         <div style="text-align:center;">
+           <img src="${(closure as any).receiptImageUrl}" alt="Reçu" style="max-width:100%;max-height:400px;border:1px solid #ddd;border-radius:6px;" /><br/>
+           <a href="${(closure as any).receiptImageUrl}" target="_blank" style="font-size:12px;color:#2563eb;display:inline-block;margin-top:6px;">Ouvrir l'image en pleine définition</a>
+         </div>
+       </div>`
+    : '';
+
+  return `
+  <div style="font-family:Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;border:1px solid #e5e7eb;padding:20px;border-radius:8px;">
+    <h2 style="margin-bottom:4px;color:#111;">Naclos Operations & Audit Portal</h2>
+    <p style="color:#666;margin-top:0;font-size:14px;">Rapport de clôture — <strong>${closure.businessDate}</strong> · Responsable: <strong>${closure.managerName}</strong></p>
+
+    <!-- Financial Summary -->
+    <table style="width:100%;border-collapse:collapse;margin:20px 0;text-align:center;">
       <tr>
-        <td style="padding:10px;background:#f5f5f5;border-radius:4px 0 0 4px;">
-          <div style="font-size:11px;color:#666;">Revenu Brut</div>
-          <div style="font-size:16px;font-weight:700;">${money(closure.grossRevenue)}</div>
+        <td style="padding:10px;background:#f9fafb;border:1px solid #f3f4f6;">
+          <div style="font-size:11px;color:#6b7280;text-transform:uppercase;">Revenu Brut</div>
+          <div style="font-size:16px;font-weight:700;color:#16a34a;">${money(closure.grossRevenue)}</div>
         </td>
-        <td style="padding:10px;background:#f5f5f5;">
-          <div style="font-size:11px;color:#666;">Dépenses</div>
-          <div style="font-size:16px;font-weight:700;">${money(closure.totalExpenses)}</div>
+        <td style="padding:10px;background:#f9fafb;border:1px solid #f3f4f6;">
+          <div style="font-size:11px;color:#6b7280;text-transform:uppercase;">Dépenses</div>
+          <div style="font-size:16px;font-weight:700;color:#dc2626;">${money(closure.totalExpenses)}</div>
         </td>
-        <td style="padding:10px;background:#f5f5f5;">
-          <div style="font-size:11px;color:#666;">Avances</div>
-          <div style="font-size:16px;font-weight:700;">${money(closure.totalStaffAdvances)}</div>
-        </td>
-        <td style="padding:10px;background:#f5f5f5;border-radius:0 4px 4px 0;">
-          <div style="font-size:11px;color:#666;">Cash Net</div>
-          <div style="font-size:16px;font-weight:700;">${money(closure.netCash)}</div>
+        <td style="padding:10px;background:#f9fafb;border:1px solid #f3f4f6;">
+          <div style="font-size:11px;color:#6b7280;text-transform:uppercase;">Cash Net</div>
+          <div style="font-size:16px;font-weight:700;color:#111827;">${money(closure.netCash)}</div>
         </td>
       </tr>
     </table>
 
     ${flagsHtml}
 
-    <p>Le rapport PDF détaillé et le fichier Excel récapitulatif sont joints à cet email.</p>
-    <p style="color:#999;font-size:11px;margin-top:32px;">Généré automatiquement — ne pas répondre à cet email.</p>
+    <!-- Dépenses Breakdown -->
+    <h3 style="font-size:14px;border-bottom:1px solid #eee;padding-bottom:6px;margin-top:24px;margin-bottom:8px;">Détail des Dépenses</h3>
+    ${expensesHtml}
+
+    <!-- Inventory Breakdown -->
+    <h3 style="font-size:14px;border-bottom:1px solid #eee;padding-bottom:6px;margin-top:24px;margin-bottom:8px;">État du Stock Réel</h3>
+    ${stockHtml}
+
+    <!-- Receipt Photo -->
+    ${receiptHtml}
+
+    <p style="color:#999;font-size:11px;margin-top:32px;border-top:1px solid #f3f4f6;padding-top:12px;">
+      Le rapport PDF détaillé et le fichier Excel récapitulatif sont joints à cet email. Généré automatiquement.
+    </p>
   </div>`;
 }

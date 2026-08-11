@@ -5,7 +5,6 @@ import { computeClosureTotals } from '@/lib/calculations';
 import type { DailyClosureInput } from '@/types';
 
 const expenseSchema = z.object({
-  categoryCode: z.string().optional().default('general'),
   label: z.string().min(1),
   amount: z.number().min(0),
 });
