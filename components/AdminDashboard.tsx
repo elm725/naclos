@@ -79,7 +79,6 @@ export default function AdminDashboard() {
     ],
   };
 
-  // Process Salem's purchases for the Inventory Chart
   const inventoryVolumes: Record<string, number> = {};
   supplies.forEach(s => {
     (s.items || []).forEach((i: any) => {
@@ -93,7 +92,7 @@ export default function AdminDashboard() {
       {
         label: 'Volume Acheté (Ce Mois)',
         data: Object.values(inventoryVolumes),
-        backgroundColor: 'rgba(59, 130, 246, 0.8)', // Blue
+        backgroundColor: 'rgba(59, 130, 246, 0.8)',
         borderRadius: 4,
       }
     ]
@@ -144,22 +143,21 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Financial Line Chart */}
+      {/* CHARTS SECTION - NOW FULL WIDTH AND TALLER */}
+      <div className="grid grid-cols-1 gap-8">
         <div className="bg-white p-6 rounded-2xl shadow-sm border">
           <h3 className="text-lg font-bold text-gray-900 mb-4">Évolution des Recettes et Dépenses</h3>
           {filteredClosures.length > 0 ? (
-            <div className="h-72"><Line data={chartData} options={{ responsive: true, maintainAspectRatio: false }} /></div>
+            <div className="h-[450px]"><Line data={chartData} options={{ responsive: true, maintainAspectRatio: false }} /></div>
           ) : (
             <p className="text-sm text-gray-400 text-center py-12">Aucune donnée disponible.</p>
           )}
         </div>
 
-        {/* NEW: Inventory Bar Chart */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border">
           <h3 className="text-lg font-bold text-gray-900 mb-4">Volume des Achats (Marchandise Salem)</h3>
           {Object.keys(inventoryVolumes).length > 0 ? (
-            <div className="h-72">
+            <div className="h-[450px]">
                <Bar 
                  data={inventoryChartData} 
                  options={{ 
@@ -175,7 +173,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* CLÔTURES (TAYEB) SECTION */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border space-y-4">
           <h3 className="text-lg font-bold text-gray-900">Clôtures Journalières ({filteredClosures.length})</h3>
@@ -240,7 +237,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* ACHATS (SALEM) SECTION */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border space-y-4">
         <h3 className="text-lg font-bold text-gray-900">Achats Marchandise (Salem)</h3>
         {supplies.length > 0 ? (
@@ -275,7 +271,7 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* MODAL FOR TAYEB'S DETAILS */}
+      {/* MODAL (Unchanged) */}
       {selectedClosure && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
           <div className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl shadow-2xl space-y-6">
@@ -292,7 +288,6 @@ export default function AdminDashboard() {
               <div><span className="text-[10px] text-gray-400 uppercase block">Cash Net</span><span className="text-base font-bold text-gray-900">{Number(selectedClosure.net_cash ?? selectedClosure.netCash).toLocaleString()} MAD</span></div>
             </div>
 
-            {/* Dépenses */}
             <div>
               <h4 className="text-xs font-bold uppercase text-gray-400 mb-2">Dépenses du Jour</h4>
               {(selectedClosure.expenses || []).length > 0 ? (
@@ -309,7 +304,6 @@ export default function AdminDashboard() {
               )}
             </div>
 
-            {/* Avances */}
             <div>
               <h4 className="text-xs font-bold uppercase text-gray-400 mb-2">Avances du Personnel</h4>
               {(selectedClosure.staffAdvances || selectedClosure.staff_advances || []).length > 0 ? (
@@ -326,7 +320,6 @@ export default function AdminDashboard() {
               )}
             </div>
 
-            {/* Stock Réel */}
             <div>
               <h4 className="text-xs font-bold uppercase text-gray-400 mb-2">État du Stock Réel</h4>
               {(selectedClosure.inventory_logs || selectedClosure.inventory || []).length > 0 ? (
