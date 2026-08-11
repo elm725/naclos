@@ -29,9 +29,18 @@ export default function AdminDashboard() {
         fetch(`/api/supply?month=${selectedMonth}`).catch(() => null)
       ]);
 
-      if (closuresRes && closuresRes.ok) setClosures((await closuresRes.json()).closures || []);
-      if (attemptsRes && attemptsRes.ok) setAttempts((await attemptsRes.json()).attempts || []);
-      if (supplyRes && supplyRes.ok) setSupplies((await supplyRes.json()).supplies || []);
+      if (closuresRes && closuresRes.ok) {
+        const cData = await closuresRes.json();
+        setClosures(cData.closures || cData || []);
+      }
+      if (attemptsRes && attemptsRes.ok) {
+        const attData = await attemptsRes.json();
+        setAttempts(attData.attempts || attData || []);
+      }
+      if (supplyRes && supplyRes.ok) {
+        const sData = await supplyRes.json();
+        setSupplies(sData.supplies || sData || []);
+      }
     } catch (err) {
       console.error('Error fetching data:', err);
     } finally {
@@ -44,7 +53,6 @@ export default function AdminDashboard() {
     router.push('/');
   };
 
-  // Fixed filtering to catch both database formats (business_date vs businessDate)
   const filteredClosures = closures.filter((c) => {
     const bDate = c.business_date || c.businessDate;
     return bDate && bDate.startsWith(selectedMonth);
@@ -52,7 +60,6 @@ export default function AdminDashboard() {
 
   const totalRevenue = filteredClosures.reduce((sum, c) => sum + (Number(c.gross_revenue ?? c.grossRevenue) || 0), 0);
   const totalExpenses = filteredClosures.reduce((sum, c) => sum + (Number(c.total_expenses ?? c.totalExpenses) || 0), 0);
-  const totalAdvances = filteredClosures.reduce((sum, c) => sum + (Number(c.total_staff_advances ?? c.totalStaffAdvances) || 0), 0);
   const totalNetCash = filteredClosures.reduce((sum, c) => sum + (Number(c.net_cash ?? c.netCash) || 0), 0);
   
   const daysCount = filteredClosures.length || 1;
@@ -83,7 +90,8 @@ export default function AdminDashboard() {
   const inventoryVolumes: Record<string, number> = {};
   supplies.forEach(s => {
     (s.items || []).forEach((i: any) => {
-      inventoryVolumes[i.label] = (inventoryVolumes[i.label] || 0) + (Number(i.quantity) || 0);
+      const itemName = i.label || i.code;
+      inventoryVolumes[itemName] = (inventoryVolumes[itemName] || 0) + (Number(i.quantity) || 0);
     });
   });
 
@@ -99,8 +107,9 @@ export default function AdminDashboard() {
     ]
   };
 
-  const selectedClosureAttempts = selectedClosure 
-    ? attempts.filter(a => a.closure_date === (selectedClosure.business_date || selectedClosure.businessDate))
+  const selectedClosureDate = selectedClosure ? (selectedClosure.business_date || selectedClosure.businessDate) : null;
+  const selectedClosureAttempts = selectedClosureDate 
+    ? attempts.filter(a => (a.closure_date || a.business_date || '').startsWith(selectedClosureDate))
     : [];
 
   return (
@@ -144,7 +153,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* CHARTS SECTION */}
       <div className="grid grid-cols-1 gap-8">
         <div className="bg-white p-6 rounded-2xl shadow-sm border">
           <h3 className="text-lg font-bold text-gray-900 mb-4">Évolution des Recettes et Dépenses</h3>
@@ -192,7 +200,7 @@ export default function AdminDashboard() {
               <tbody className="divide-y">
                 {filteredClosures.map((c) => {
                   const bDate = c.business_date || c.businessDate;
-                  const dayAttempts = attempts.filter(a => a.closure_date === bDate);
+                  const dayAttempts = attempts.filter(a => (a.closure_date || a.business_date || '').startsWith(bDate));
                   const realTime = new Date(c.submitted_at || c.created_at || new Date()).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
                   
                   return (
@@ -253,12 +261,12 @@ export default function AdminDashboard() {
               <tbody className="divide-y">
                 {supplies.map((s) => (
                   <tr key={s.id} className="hover:bg-gray-50">
-                    <td className="py-3 font-bold">{s.business_date}</td>
-                    <td className="py-3 text-xs text-blue-600 font-mono">{new Date(s.submitted_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short'})}</td>
+                    <td className="py-3 font-bold">{s.business_date || s.businessDate}</td>
+                    <td className="py-3 text-xs text-blue-600 font-mono">{new Date(s.submitted_at || s.created_at || new Date()).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short'})}</td>
                     <td className="py-3 text-xs">
-                      {(s.items || []).map((i: any) => (
-                        <span key={i.code} className="inline-block bg-gray-100 rounded px-2 py-1 mr-2 mb-1 border font-medium">
-                          {i.label}: <strong className="text-gray-900">{i.quantity} {i.unit}</strong>
+                      {(s.items || []).map((i: any, idx: number) => (
+                        <span key={idx} className="inline-block bg-gray-100 rounded px-2 py-1 mr-2 mb-1 border font-medium">
+                          {i.label || i.code}: <strong className="text-gray-900">{i.quantity} {i.unit}</strong>
                         </span>
                       ))}
                     </td>
@@ -277,7 +285,7 @@ export default function AdminDashboard() {
           <div className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl shadow-2xl space-y-6">
             <div className="flex justify-between items-center border-b pb-4">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Détails de Clôture — {selectedClosure.business_date || selectedClosure.businessDate}</h2>
+                <h2 className="text-xl font-bold text-gray-900">Détails de Clôture — {selectedClosureDate}</h2>
               </div>
               <button onClick={() => setSelectedClosure(null)} className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full font-bold text-gray-600">✕</button>
             </div>
@@ -362,23 +370,23 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {selectedClosureAttempts.length > 1 && (
+            {selectedClosureAttempts.length > 0 && (
               <div className="mt-8 border-t-2 border-red-100 pt-6">
-                <h3 className="text-lg font-bold text-red-600 mb-4">⚠️ Historique des Soumissions (Anciennes Tentatives)</h3>
+                <h3 className="text-lg font-bold text-red-600 mb-4">⚠️ Historique des Soumissions (Tentatives du jour)</h3>
                 <div className="space-y-4">
-                  {selectedClosureAttempts.slice(1).map((attempt, idx) => {
-                    const data = attempt.attempted_data;
+                  {selectedClosureAttempts.map((attempt, idx) => {
+                    const data = attempt.attempted_data || attempt;
                     const expTotal = (data.expenses || []).reduce((sum: number, e: any) => sum + (Number(e.amount) || 0), 0);
                     return (
                       <div key={idx} className="bg-red-50 p-4 rounded-xl border border-red-200 text-sm">
                         <div className="flex justify-between border-b border-red-200 pb-2 mb-2">
-                          <span className="font-bold text-red-800">Tentative {selectedClosureAttempts.length - idx - 1}</span>
-                          <span className="text-xs text-red-600">{new Date(attempt.created_at).toLocaleTimeString()}</span>
+                          <span className="font-bold text-red-800">Tentative #{idx + 1}</span>
+                          <span className="text-xs text-red-600">{new Date(attempt.created_at || attempt.submitted_at || new Date()).toLocaleTimeString()}</span>
                         </div>
                         <ul className="space-y-1 text-red-900">
-                          <li><strong>Ancienne Recette Brute:</strong> {data.grossRevenue} MAD</li>
-                          <li><strong>Anciennes Dépenses:</strong> {expTotal} MAD</li>
-                          {data.notes && <li><strong>Ancienne Note:</strong> "{data.notes}"</li>}
+                          <li><strong>Recette Brute:</strong> {data.grossRevenue || data.gross_revenue} MAD</li>
+                          <li><strong>Dépenses:</strong> {expTotal} MAD</li>
+                          {data.notes && <li><strong>Note:</strong> "{data.notes}"</li>}
                         </ul>
                       </div>
                     );
