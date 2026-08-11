@@ -57,10 +57,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid submission payload' }, { status: 400 });
   }
 
-  const today = new Date().toISOString().split('T')[0];
-  if (payload.businessDate !== today) {
-    return NextResponse.json({ error: "Les clôtures ne peuvent être soumises que pour la date d'aujourd'hui." }, { status: 400 });
-  }
+  // NOTE: The "Same Day Only" restriction has been completely removed! 
+  // Tayeb can now submit for yesterday at 2 AM without getting blocked.
 
   const supabase = getSupabaseAdminClient();
 

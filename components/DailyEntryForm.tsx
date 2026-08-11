@@ -19,6 +19,9 @@ export default function DailyEntryForm() {
   const router = useRouter();
   const managerName = 'Tayeb';
 
+  // The Date State MUST be inside the component function
+  const [businessDate, setBusinessDate] = useState(new Date().toISOString().split('T')[0]);
+
   const [grossRevenue, setGrossRevenue] = useState<number | ''>('');
   const [notes, setNotes] = useState('');
   const [receiptImageUrl, setReceiptImageUrl] = useState<string | null>(null);
@@ -102,10 +105,8 @@ export default function DailyEntryForm() {
     setLoading(true);
     setMessage(null);
 
-    const today = new Date().toISOString().split('T')[0];
-
     const payload = {
-      businessDate: today,
+      businessDate: businessDate, // Fixed the double comma here
       storeId: 'main',
       managerName,
       grossRevenue: Number(grossRevenue) || 0,
@@ -157,9 +158,20 @@ export default function DailyEntryForm() {
 
       <div className="border-b pb-4">
         <h2 className="text-2xl font-bold text-gray-900">Saisie du Jour — Naclos</h2>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-500 mb-2">
           Connecté en tant que: <span className="font-bold text-gray-800">{managerName}</span>
         </p>
+        
+        {/* Your Date Picker */}
+        <div className="flex items-center gap-2 mt-2">
+          <label className="text-sm text-gray-600 font-bold">Date de la Clôture :</label>
+          <input 
+            type="date" 
+            value={businessDate} 
+            onChange={(e) => setBusinessDate(e.target.value)} 
+            className="border p-1.5 rounded-lg text-sm outline-none font-bold text-black" 
+          />
+        </div>
       </div>
 
       {message && (
