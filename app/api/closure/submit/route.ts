@@ -57,12 +57,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid submission payload' }, { status: 400 });
   }
 
-  // NOTE: The "Same Day Only" restriction has been completely removed! 
-  // Tayeb can now submit for yesterday at 2 AM without getting blocked.
-
   const supabase = getSupabaseAdminClient();
 
-  // 1. ALWAYS log the exact incoming data as a submission attempt
+  // 1. ALWAYS log the exact incoming data as a submission attempt into closure_submission_attempts
   await supabase.from('closure_submission_attempts').insert({
     closure_date: payload.businessDate,
     submitted_by: payload.managerName,
