@@ -48,10 +48,11 @@ const closureInputSchema = z.object({
 
 export async function POST(request: NextRequest) {
   let payload: DailyClosureInput & { receiptImageUrl?: string | null };
+  let rawJson: any;
 
   try {
-    const json = await request.json();
-    payload = closureInputSchema.parse(json);
+    rawJson = await request.json();
+    payload = closureInputSchema.parse(rawJson);
   } catch (err) {
     console.error('Validation Error:', err);
     return NextResponse.json(
@@ -71,67 +72,89 @@ export async function POST(request: NextRequest) {
 
   const supabase = getSupabaseAdminClient();
 
-  // Theft-prevention check
+  // 1. Check if a closure entry ALREADY exists for this date and store
   const { data: existing } = await supabase
     .from('daily_closures')
-    .select('id, status')
+    .select('id, status, manager_name, submitted_at')
     .eq('business_date', payload.businessDate)
     .eq('store_id', payload.storeId)
     .maybeSingle();
 
-  if (existing && existing.status === 'locked') {
+  if (existing) {
+    // Log the duplicate attempt for dashboard auditing
+    try {
+      await supabase.from('closure_submission_attempts').insert({
+        closure_date: payload.businessDate,
+        submitted_by: payload.managerName,
+        attempted_data: rawJson,
+      });
+    } catch (auditErr) {
+      console.error('Failed to log submission attempt:', auditErr);
+    }
+
     return NextResponse.json(
-      { error: `A closure for ${payload.businessDate} is locked. Admin approval is required to edit.` },
+      {
+        error: `Une clôture pour le ${payload.businessDate} a déjà été soumise. Une seule soumission est autorisée par jour.`,
+        isDuplicate: true,
+      },
       { status: 409 }
     );
   }
 
   const totals = computeClosureTotals(payload);
 
-  // 1. Upsert parent row
+  // 2. Insert primary closure row
   const { data: closure, error: closureError } = await supabase
     .from('daily_closures')
-    .upsert(
-      {
-        id: existing?.id,
-        business_date: payload.businessDate,
-        store_id: payload.storeId,
-        manager_name: payload.managerName,
-        receipt_image_url: payload.receiptImageUrl ?? null,
-        gross_revenue: payload.grossRevenue,
-        total_expenses: totals.totalExpenses,
-        total_staff_advances: totals.totalStaffAdvances,
-        net_cash: totals.netCash,
-        net_profit: totals.netProfit,
-        has_inventory_discrepancy: totals.hasInventoryDiscrepancy,
-        discrepancy_summary: totals.discrepancySummary,
-        status: 'submitted',
-        submitted_at: new Date().toISOString(),
-      },
-      { onConflict: 'business_date,store_id' }
-    )
+    .insert({
+      business_date: payload.businessDate,
+      store_id: payload.storeId,
+      manager_name: payload.managerName,
+      receipt_image_url: payload.receiptImageUrl ?? null,
+      gross_revenue: payload.grossRevenue,
+      total_expenses: totals.totalExpenses,
+      total_staff_advances: totals.totalStaffAdvances,
+      net_cash: totals.netCash,
+      net_profit: totals.netProfit,
+      has_inventory_discrepancy: totals.hasInventoryDiscrepancy,
+      discrepancy_summary: totals.discrepancySummary,
+      status: 'submitted',
+      submitted_at: new Date().toISOString(),
+    })
     .select()
     .single();
 
   if (closureError || !closure) {
-    console.error('Closure Upsert Error:', closureError);
+    console.error('Closure Insert Error:', closureError);
+
+    // Fallback if unique constraint triggers in DB
+    if (closureError?.code === '23505') {
+      await supabase.from('closure_submission_attempts').insert({
+        closure_date: payload.businessDate,
+        submitted_by: payload.managerName,
+        attempted_data: rawJson,
+      });
+
+      return NextResponse.json(
+        {
+          error: `Une clôture pour le ${payload.businessDate} a déjà été soumise. Une seule soumission est autorisée par jour.`,
+          isDuplicate: true,
+        },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json({ error: 'Failed to save closure', details: closureError?.message }, { status: 500 });
   }
 
   const closureId = closure.id;
 
   try {
-    // 2. Delete existing child records
-    await supabase.from('expenses').delete().eq('closure_id', closureId);
-    await supabase.from('staff_advances').delete().eq('closure_id', closureId);
-    await supabase.from('inventory_logs').delete().eq('closure_id', closureId);
-    await supabase.from('menu_sales').delete().eq('closure_id', closureId);
-
     // 3. Insert child records
     if (payload.expenses.length > 0) {
       const { data: categories } = await supabase.from('expense_categories').select('id, code');
       const catMap = Object.fromEntries((categories || []).map((c: any) => [c.code, c.id]));
-      
+
       const validExpenses = payload.expenses.filter((e) => e.label && e.amount > 0);
       if (validExpenses.length > 0) {
         const { error: expErr } = await supabase.from('expenses').insert(
@@ -164,8 +187,7 @@ export async function POST(request: NextRequest) {
     if (payload.inventory.length > 0) {
       const { data: materials } = await supabase.from('raw_materials').select('id, code');
       const matMap = Object.fromEntries((materials || []).map((m: any) => [m.code, m.id]));
-      
-      // Only process inventory entries with a valid material code
+
       const validInventory = payload.inventory.filter((i) => i.materialCode && matMap[i.materialCode]);
 
       if (validInventory.length > 0) {
@@ -185,11 +207,10 @@ export async function POST(request: NextRequest) {
 
     if (payload.menuSales && payload.menuSales.length > 0) {
       const { data: items } = await supabase.from('menu_items').select('id, code, label_fr');
-      
+
       const itemMapByCode = Object.fromEntries((items || []).map((m: any) => [m.code, m.id]));
       const itemMapByLabel = Object.fromEntries((items || []).map((m: any) => [m.label_fr?.toLowerCase(), m.id]));
 
-      // Map and deduplicate sales by summing quantities for identical items
       const salesMap = new Map<string, number>();
 
       for (const s of payload.menuSales) {
@@ -220,7 +241,7 @@ export async function POST(request: NextRequest) {
       detail: { hasInventoryDiscrepancy: totals.hasInventoryDiscrepancy },
     });
 
-    // 5. Trigger Nightly Email asynchronously
+    // 5. Trigger Email Report asynchronously
     const reportUrl = new URL('/api/reports/email', request.url);
     fetch(reportUrl, {
       method: 'POST',
@@ -243,7 +264,6 @@ export async function POST(request: NextRequest) {
       },
       inventoryFlags: totals.inventoryFlags,
     });
-
   } catch (err) {
     console.error('Child Insert Process Error:', err);
     return NextResponse.json(
