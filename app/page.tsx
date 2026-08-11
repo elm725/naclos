@@ -14,28 +14,36 @@ export default function WelcomePage() {
     setError('');
 
     if (pin === '1234') {
-      // Tayeb: Direct access to entry
+      // Tayeb: Direct access to entry form
       sessionStorage.setItem('naclos_authenticated', 'true');
       sessionStorage.setItem('naclos_role', 'tayeb');
       router.push('/entry');
     } else if (pin === '9999') {
-      // Admin: Access choice menu
+      // Admin: Access to module selection menu
       sessionStorage.setItem('naclos_authenticated', 'true');
       sessionStorage.setItem('naclos_role', 'admin');
       setAuthRole('admin');
     } else {
-      setError('Code PIN incorrect. (Essayez 1234 ou 9999)');
+      setError('Code PIN incorrect.');
     }
   };
 
-  // If Admin (9999), show selection choice
+  // Admin Choice Menu
   if (authRole === 'admin') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-        <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-md space-y-6 text-center">
+        <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-md space-y-6 text-center border">
+          <div className="flex justify-center">
+            <img
+              src="/logo.png"
+              alt="Naclo's Logo"
+              className="w-28 h-28 object-contain"
+            />
+          </div>
+
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Naclos Portal — Admin</h1>
-            <p className="text-xs text-gray-500 mt-1">Sélectionnez l'espace de votre choix</p>
+            <h1 className="text-2xl font-bold text-gray-900">Espace Administration</h1>
+            <p className="text-xs text-gray-500 mt-1">Sélectionnez le module à consulter</p>
           </div>
 
           <div className="space-y-3">
@@ -50,7 +58,7 @@ export default function WelcomePage() {
               onClick={() => router.push('/dashboard')}
               className="w-full py-4 bg-gray-100 text-gray-900 font-bold rounded-xl hover:bg-gray-200 transition text-sm border"
             >
-              📊 Tableau de Bord (Admin Dashboard)
+              📊 Tableau de Bord (Admin)
             </button>
           </div>
 
@@ -60,7 +68,7 @@ export default function WelcomePage() {
               setAuthRole(null);
               setPin('');
             }}
-            className="text-xs text-red-600 hover:underline mt-4 block mx-auto"
+            className="text-xs text-red-600 hover:underline mt-4 block mx-auto font-medium"
           >
             Se déconnecter
           </button>
@@ -69,13 +77,20 @@ export default function WelcomePage() {
     );
   }
 
-  // Initial PIN entry screen
+  // Initial PIN Entry Form
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
-      <div className="w-full max-w-sm bg-white p-6 rounded-xl shadow-md space-y-6">
-        <div className="text-center">
+      <div className="w-full max-w-sm bg-white p-6 rounded-2xl shadow-md space-y-6">
+        <div className="text-center space-y-2">
+          <div className="flex justify-center">
+            <img
+              src="/logo.png"
+              alt="Naclo's Logo"
+              className="w-32 h-32 object-contain"
+            />
+          </div>
           <h1 className="text-2xl font-bold text-gray-900">Naclos Portal</h1>
-          <p className="text-xs text-gray-500 mt-1">Saisissez votre code PIN (1234 ou 9999)</p>
+          <p className="text-xs text-gray-500">Veuillez saisir votre code PIN</p>
         </div>
 
         {error && (
@@ -88,18 +103,18 @@ export default function WelcomePage() {
           <div>
             <input
               type="password"
-              maxLength={4}
+              maxLength={6}
               placeholder="PIN"
               value={pin}
               onChange={(e) => setPin(e.target.value)}
-              className="w-full p-3 text-center text-2xl font-mono tracking-widest border rounded-lg outline-none focus:ring-2 focus:ring-black"
+              className="w-full p-3 text-center text-2xl font-mono tracking-widest border rounded-xl outline-none focus:ring-2 focus:ring-black"
               autoFocus
             />
           </div>
 
           <button
             type="submit"
-            className="w-full py-3 bg-black text-white font-bold rounded-lg hover:bg-gray-800 transition text-sm"
+            className="w-full py-3.5 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition text-sm shadow-sm"
           >
             Se Connecter
           </button>
