@@ -11,14 +11,16 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdminClient();
     let query = supabase.from('supply_purchases').select('*').order('business_date', { ascending: false });
     
-    if (month) query = query.like('business_date', `${month}-%`);
+    if (month) {
+      query = query.like('business_date', `${month}-%`);
+    }
     
     const { data, error } = await query;
     if (error) throw error;
     
     return NextResponse.json({ supplies: data || [] });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Erreur GET supply' }, { status: 500 });
+    return NextResponse.json({ supplies: [] }, { status: 200 });
   }
 }
 
@@ -45,6 +47,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error('Supabase Supply Error:', err);
-    return NextResponse.json({ error: err.message || 'Erreur interne lors de l’enregistrement des achats.' }, { status: 500 });
+    return NextResponse.json({ error: err.message || 'Erreur interne.' }, { status: 500 });
   }
 }
