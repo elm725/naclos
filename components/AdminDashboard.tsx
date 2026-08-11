@@ -41,8 +41,6 @@ export default function AdminDashboard() {
 
   const fetchClosures = async () => {
     try {
-      const res = await fetch('/api/dashboard/closures'); // Or your endpoint returning closures with child records
-      // Fallback: If you fetch directly from Supabase client or API route
       const supabaseRes = await fetch('/api/closure/list').catch(() => null);
       if (supabaseRes && supabaseRes.ok) {
         const data = await supabaseRes.json();
@@ -78,8 +76,8 @@ export default function AdminDashboard() {
   const avgNetCash = totalNetCash / daysCount;
   const expenseRatio = totalRevenue > 0 ? ((totalExpenses / totalRevenue) * 100).toFixed(1) : '0';
 
-  const maxDay = filteredClosures.reduce((max, c) => (Number(c.gross_revenue ?? c.grossRevenue) > Number(max?.gross_revenue ?? max?.grossRevenue || 0) ? c : max), null);
-  const minDay = filteredClosures.reduce((min, c) => (Number(c.gross_revenue ?? c.grossRevenue) < Number(min?.gross_revenue ?? min?.grossRevenue || Infinity) ? c : min), null);
+  const maxDay = filteredClosures.reduce((max, c) => (Number(c.gross_revenue ?? c.grossRevenue) > Number((max?.gross_revenue ?? max?.grossRevenue) || 0) ? c : max), null);
+  const minDay = filteredClosures.reduce((min, c) => (Number(c.gross_revenue ?? c.grossRevenue) < Number((min?.gross_revenue ?? min?.grossRevenue) || Infinity) ? c : min), null);
 
   // Aggregate Staff Advances for the Month
   const staffAdvancesMap: { [key: string]: number } = {};
