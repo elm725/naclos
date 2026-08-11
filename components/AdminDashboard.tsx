@@ -44,10 +44,11 @@ export default function AdminDashboard() {
     router.push('/');
   };
 
+  // Fixed filtering to catch both database formats (business_date vs businessDate)
   const filteredClosures = closures.filter((c) => {
     const bDate = c.business_date || c.businessDate;
     return bDate && bDate.startsWith(selectedMonth);
-  }).sort((a, b) => new Date(a.business_date || a.businessDate).getTime() - new Date(b.business_date || b.businessDate).getTime());
+  }).sort((a, b) => new Date(a.business_date || a.businessDate || 0).getTime() - new Date(b.business_date || b.businessDate || 0).getTime());
 
   const totalRevenue = filteredClosures.reduce((sum, c) => sum + (Number(c.gross_revenue ?? c.grossRevenue) || 0), 0);
   const totalExpenses = filteredClosures.reduce((sum, c) => sum + (Number(c.total_expenses ?? c.totalExpenses) || 0), 0);
@@ -143,7 +144,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* CHARTS SECTION - NOW FULL WIDTH AND TALLER */}
+      {/* CHARTS SECTION */}
       <div className="grid grid-cols-1 gap-8">
         <div className="bg-white p-6 rounded-2xl shadow-sm border">
           <h3 className="text-lg font-bold text-gray-900 mb-4">Évolution des Recettes et Dépenses</h3>
@@ -271,7 +272,6 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* MODAL (Unchanged) */}
       {selectedClosure && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
           <div className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl shadow-2xl space-y-6">
