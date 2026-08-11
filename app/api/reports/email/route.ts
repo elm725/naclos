@@ -4,12 +4,10 @@ import { getSupabaseAdminClient } from '@/lib/supabaseClient';
 import { generateDailyReportPdfBuffer } from '@/lib/pdfGenerator';
 import { generateDailyExcelBuffer } from '@/lib/excelExport';
 import { buildInventoryFlags } from '@/lib/calculations';
-import type { DailyClosureRecord } from '@/types';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request: NextRequest) {
-  // Protect this route: only the internal submit flow or an authenticated cron may call it.
   const cronSecret = request.headers.get('x-cron-secret');
   if (!cronSecret || cronSecret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -22,12 +20,12 @@ export async function POST(request: NextRequest) {
 
   const supabase = getSupabaseAdminClient();
 
-  // Avoid double-sending if this closure's report already went out.
   const { data: alreadySent } = await supabase
     .from('report_deliveries')
     .select('id')
     .eq('closure_id', closureId)
     .maybeSingle();
+
   if (alreadySent) {
     return NextResponse.json({ success: true, skipped: true, reason: 'Report already sent for this closure.' });
   }
@@ -69,6 +67,7 @@ export async function POST(request: NextRequest) {
       recipients,
       status: 'sent',
     });
+
     await supabase.from('audit_log').insert({
       closure_id: closureId,
       actor: 'system',
@@ -88,10 +87,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Data loading: reassembles the flat record shape used by the PDF/Excel builders
-// ---------------------------------------------------------------------------
-async function loadFullClosureRecord(supabase: ReturnType<typeof getSupabaseAdminClient>, closureId: string): Promise<DailyClosureRecord | null> {
+async function loadFullClosureRecord(supabase: ReturnType<typeof getSupabaseAdminClient>, closureId: string): Promise<any> {
   const { data: closure } = await supabase.from('daily_closures').select('*').eq('id', closureId).single();
   if (!closure) return null;
 
@@ -107,11 +103,6 @@ async function loadFullClosureRecord(supabase: ReturnType<typeof getSupabaseAdmi
     .select('opening_stock, supply_purchased, consumed_amount, physical_closing_count, calculated_remaining_stock, variance, is_flagged, raw_materials(code, label_fr, unit)')
     .eq('closure_id', closureId);
 
-  const { data: sales } = await supabase
-    .from('menu_sales')
-    .select('quantity_sold, menu_items(code, label_fr, menu_categories(code))')
-    .eq('closure_id', closureId);
-
   return {
     id: closure.id,
     businessDate: closure.business_date,
@@ -119,16 +110,15 @@ async function loadFullClosureRecord(supabase: ReturnType<typeof getSupabaseAdmi
     managerName: closure.manager_name,
     grossRevenue: Number(closure.gross_revenue),
     totalExpenses: Number(closure.total_expenses),
-    totalStaffAdvances: Number(closure.total_staff_advances),
+    totalStaffAdvances: Number(closure.total_staff_advances || 0),
     netCash: Number(closure.net_cash),
-    netProfit: Number(closure.net_profit),
+    netProfit: Number(closure.net_profit || 0),
+    notes: closure.notes || closure.discrepancy_summary || '',
     status: closure.status,
     receiptImageUrl: closure.receipt_image_url ?? null,
     hasInventoryDiscrepancy: closure.has_inventory_discrepancy,
     discrepancySummary: closure.discrepancy_summary,
     submittedAt: closure.submitted_at,
-    createdAt: closure.created_at,
-    updatedAt: closure.updated_at,
     expenses: (expenses || []).map((e: any) => ({
       categoryCode: e.expense_categories?.code || 'divers',
       label: e.label,
@@ -143,31 +133,25 @@ async function loadFullClosureRecord(supabase: ReturnType<typeof getSupabaseAdmi
       materialCode: i.raw_materials?.code,
       materialLabel: i.raw_materials?.label_fr,
       unit: i.raw_materials?.unit,
-      openingStock: Number(i.opening_stock),
-      supplyPurchased: Number(i.supply_purchased),
-      consumedAmount: Number(i.consumed_amount),
-      physicalClosingCount: Number(i.physical_closing_count),
-      calculatedRemainingStock: Number(i.calculated_remaining_stock),
-      variance: Number(i.variance),
+      openingStock: Number(i.opening_stock || 0),
+      supplyPurchased: Number(i.supply_purchased || 0),
+      consumedAmount: Number(i.consumed_amount || 0),
+      physicalClosingCount: Number(i.physical_closing_count || 0),
+      calculatedRemainingStock: Number(i.calculated_remaining_stock || 0),
+      variance: Number(i.variance || 0),
       isFlagged: i.is_flagged,
-    })),
-    menuSales: (sales || []).map((s: any) => ({
-      categoryCode: s.menu_items?.menu_categories?.code || '',
-      itemCode: s.menu_items?.code || '',
-      itemLabel: s.menu_items?.label_fr || '',
-      quantitySold: s.quantity_sold,
     })),
   };
 }
 
-function buildEmailHtml(closure: DailyClosureRecord, flags: ReturnType<typeof buildInventoryFlags>): string {
+function buildEmailHtml(closure: any, flags: any[]): string {
   const currency = process.env.NEXT_PUBLIC_CURRENCY || 'MAD';
   const money = (n: number) => `${n.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} ${currency}`;
 
   const flagsHtml = flags.length
     ? `<div style="background:#fdecec;border-left:4px solid #d92d20;padding:14px 16px;border-radius:6px;margin:16px 0;">
          <strong style="color:#a3161a;">⚠ ${flags.length} écart(s) de stock détecté(s):</strong>
-         <ul style="margin:8px 0 0 18px;color:#a3161a;">${flags.map((f) => `<li>${f.message}</li>`).join('')}</ul>
+         <ul style="margin:8px 0 0 18px;color:#a3161a;">${flags.map((f: any) => `<li>${f.message}</li>`).join('')}</ul>
        </div>`
     : `<div style="background:#eafaf0;border-left:4px solid #12b76a;padding:14px 16px;border-radius:6px;margin:16px 0;color:#067647;">
          ✓ Aucun écart de stock détecté aujourd'hui.
@@ -184,7 +168,7 @@ function buildEmailHtml(closure: DailyClosureRecord, flags: ReturnType<typeof bu
          <tbody>
            ${closure.expenses
              .map(
-               (e) => `
+               (e: any) => `
              <tr>
                <td style="padding:8px;border-bottom:1px solid #eee;">${e.label}</td>
                <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;font-weight:bold;color:#d92d20;">${money(e.amount)}</td>
@@ -206,7 +190,7 @@ function buildEmailHtml(closure: DailyClosureRecord, flags: ReturnType<typeof bu
          <tbody>
            ${closure.inventory
              .map(
-               (i) => `
+               (i: any) => `
              <tr>
                <td style="padding:8px;border-bottom:1px solid #eee;">${i.materialLabel || i.materialCode || 'Article'}</td>
                <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;font-weight:bold;">${i.physicalClosingCount} ${i.unit || ''}</td>
@@ -217,12 +201,19 @@ function buildEmailHtml(closure: DailyClosureRecord, flags: ReturnType<typeof bu
        </table>`
     : `<p style="font-size:13px;color:#777;font-style:italic;">Aucune donnée de stock enregistrée.</p>`;
 
-  const receiptHtml = (closure as any).receiptImageUrl
+  const notesHtml = closure.notes
+    ? `<div style="background:#fffbe0;border-left:4px solid #f59e0b;padding:12px;border-radius:6px;margin:20px 0;">
+         <strong style="color:#92400e;font-size:12px;text-transform:uppercase;">Note / Remarque:</strong>
+         <p style="margin:4px 0 0 0;color:#78350f;font-size:13px;font-style:italic;">"${closure.notes}"</p>
+       </div>`
+    : '';
+
+  const receiptHtml = closure.receiptImageUrl
     ? `<div style="margin-top:20px;">
          <h3 style="font-size:14px;border-bottom:1px solid #eee;padding-bottom:6px;margin-bottom:10px;">Justificatif / Reçu Image</h3>
          <div style="text-align:center;">
-           <img src="${(closure as any).receiptImageUrl}" alt="Reçu" style="max-width:100%;max-height:400px;border:1px solid #ddd;border-radius:6px;" /><br/>
-           <a href="${(closure as any).receiptImageUrl}" target="_blank" style="font-size:12px;color:#2563eb;display:inline-block;margin-top:6px;">Ouvrir l'image en pleine définition</a>
+           <img src="${closure.receiptImageUrl}" alt="Reçu" style="max-width:100%;max-height:400px;border:1px solid #ddd;border-radius:6px;" /><br/>
+           <a href="${closure.receiptImageUrl}" target="_blank" style="font-size:12px;color:#2563eb;display:inline-block;margin-top:6px;">Ouvrir l'image en pleine définition</a>
          </div>
        </div>`
     : '';
@@ -232,7 +223,6 @@ function buildEmailHtml(closure: DailyClosureRecord, flags: ReturnType<typeof bu
     <h2 style="margin-bottom:4px;color:#111;">Naclos Operations & Audit Portal</h2>
     <p style="color:#666;margin-top:0;font-size:14px;">Rapport de clôture — <strong>${closure.businessDate}</strong> · Responsable: <strong>${closure.managerName}</strong></p>
 
-    <!-- Financial Summary -->
     <table style="width:100%;border-collapse:collapse;margin:20px 0;text-align:center;">
       <tr>
         <td style="padding:10px;background:#f9fafb;border:1px solid #f3f4f6;">
@@ -251,16 +241,14 @@ function buildEmailHtml(closure: DailyClosureRecord, flags: ReturnType<typeof bu
     </table>
 
     ${flagsHtml}
+    ${notesHtml}
 
-    <!-- Dépenses Breakdown -->
     <h3 style="font-size:14px;border-bottom:1px solid #eee;padding-bottom:6px;margin-top:24px;margin-bottom:8px;">Détail des Dépenses</h3>
     ${expensesHtml}
 
-    <!-- Inventory Breakdown -->
     <h3 style="font-size:14px;border-bottom:1px solid #eee;padding-bottom:6px;margin-top:24px;margin-bottom:8px;">État du Stock Réel</h3>
     ${stockHtml}
 
-    <!-- Receipt Photo -->
     ${receiptHtml}
 
     <p style="color:#999;font-size:11px;margin-top:32px;border-top:1px solid #f3f4f6;padding-top:12px;">

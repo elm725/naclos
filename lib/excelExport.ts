@@ -1,11 +1,10 @@
 import ExcelJS from 'exceljs';
-import type { DailyClosureRecord, DailyClosureInput } from '@/types';
 
 /**
  * Generates an executive Excel report buffer for a daily closure entry.
  */
 export async function generateExcelReport(
-  closure: DailyClosureRecord | DailyClosureInput,
+  closure: any,
   existingWorkbookBuffer?: Buffer
 ): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
@@ -14,10 +13,7 @@ export async function generateExcelReport(
     await workbook.xlsx.load(existingWorkbookBuffer as any);
   }
 
-  // 1. Build or Append Daily Summary Sheet
   buildDailySummarySheet(workbook, closure);
-
-  // 2. Build or Append Stock Inventory Sheet
   buildStockInventorySheet(workbook, closure);
 
   const arrayBuffer = await workbook.xlsx.writeBuffer();
@@ -28,7 +24,7 @@ export async function generateExcelReport(
  * Alias exported function to match API route imports.
  */
 export async function generateDailyExcelBuffer(
-  closure: DailyClosureRecord | DailyClosureInput,
+  closure: any,
   existingWorkbookBuffer?: Buffer
 ): Promise<Buffer> {
   return generateExcelReport(closure, existingWorkbookBuffer);
@@ -43,11 +39,11 @@ function buildDailySummarySheet(workbook: ExcelJS.Workbook, closure: any): void 
       pageSetup: { paperSize: 9, orientation: 'landscape' },
       views: [{ showGridLines: true }],
     });
-  } else {
-    sheet.addPageBreak();
   }
 
   const currency = process.env.NEXT_PUBLIC_CURRENCY || 'MAD';
+  const businessDate = closure.businessDate || closure.business_date || '';
+  const managerName = closure.managerName || closure.manager_name || 'Tayeb';
 
   // 1. Title Banner
   sheet.mergeCells('A1:D1');
@@ -61,14 +57,14 @@ function buildDailySummarySheet(workbook: ExcelJS.Workbook, closure: any): void 
   // Subtitle
   sheet.mergeCells('A2:D2');
   const subCell = sheet.getCell('A2');
-  subCell.value = `Date: ${closure.businessDate}   |   Responsable: ${closure.managerName}   |   Statut: ${closure.status || 'Soumis'}`;
+  subCell.value = `Date: ${businessDate}   |   Responsable: ${managerName}   |   Statut: ${closure.status || 'Soumis'}`;
   subCell.font = { name: 'Arial', size: 10, italic: true, color: { argb: '64748B' } };
   subCell.alignment = { vertical: 'middle', horizontal: 'center' };
   sheet.getRow(2).height = 20;
 
   sheet.addRow([]);
 
-  // 2. KPI Cards (Rows 4 & 5)
+  // 2. KPI Cards
   sheet.getCell('A4').value = 'RECETTE BRUTE';
   sheet.getCell('B4').value = 'TOTAL DÉPENSES';
   sheet.getCell('C4').value = 'CASH NET ATTENDU';
@@ -80,9 +76,9 @@ function buildDailySummarySheet(workbook: ExcelJS.Workbook, closure: any): void 
     c.alignment = { horizontal: 'center', vertical: 'middle' };
   });
 
-  const grossRevenue = Number(closure.grossRevenue) || 0;
-  const totalExpenses = Number(closure.totalExpenses) || 0;
-  const netCash = Number(closure.netCash) || grossRevenue - totalExpenses;
+  const grossRevenue = Number(closure.grossRevenue ?? closure.gross_revenue) || 0;
+  const totalExpenses = Number(closure.totalExpenses ?? closure.total_expenses) || 0;
+  const netCash = Number(closure.netCash ?? closure.net_cash) || grossRevenue - totalExpenses;
 
   sheet.getCell('A5').value = grossRevenue;
   sheet.getCell('A5').numberFormat = `#,##0.00 "${currency}"`;
@@ -116,7 +112,7 @@ function buildDailySummarySheet(workbook: ExcelJS.Workbook, closure: any): void 
 
   sheet.addRow([]);
 
-  // 3. Expenses Section Table
+  // 3. Expenses Section
   let startRow = 8;
   sheet.mergeCells(`A${startRow}:D${startRow}`);
   const expTitle = sheet.getCell(`A${startRow}`);
@@ -147,26 +143,22 @@ function buildDailySummarySheet(workbook: ExcelJS.Workbook, closure: any): void 
       startRow++;
     });
 
-    // Total Expenses Formula
     sheet.getRow(startRow).values = ['', 'TOTAL DÉPENSES', '', { formula: `SUM(D${expStart}:D${startRow - 1})` }];
     sheet.mergeCells(`B${startRow}:C${startRow}`);
     sheet.getCell(`B${startRow}`).font = { name: 'Arial', size: 10, bold: true };
     const totCell = sheet.getCell(`D${startRow}`);
     totCell.numberFormat = `#,##0.00 "${currency}"`;
     totCell.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'B91C1C' } };
-    startRow++;
   } else {
     sheet.getRow(startRow).values = ['-', 'Aucune dépense enregistrée', '', 0];
     sheet.mergeCells(`B${startRow}:C${startRow}`);
-    startRow++;
   }
 
-  // Column Widths
   sheet.columns = [
-    { width: 8 },  // Col A
-    { width: 30 }, // Col B
-    { width: 20 }, // Col C
-    { width: 20 }, // Col D
+    { width: 8 },
+    { width: 30 },
+    { width: 20 },
+    { width: 20 },
   ];
 }
 
@@ -179,7 +171,6 @@ function buildStockInventorySheet(workbook: ExcelJS.Workbook, closure: any): voi
       views: [{ showGridLines: true }],
     });
 
-    // Header Row
     sheet.addRow(['#', 'Code Article', 'Désignation Produit', 'Stock Réel Compté', 'Unité']);
     const hRow = sheet.getRow(1);
     hRow.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFF' } };
@@ -194,9 +185,9 @@ function buildStockInventorySheet(workbook: ExcelJS.Workbook, closure: any): voi
   inventoryList.forEach((item: any, idx: number) => {
     const row = sheet.addRow([
       idx + 1,
-      item.materialCode || '-',
-      item.materialLabel || 'Article',
-      Number(item.physicalClosingCount) || 0,
+      item.materialCode || item.code || '-',
+      item.materialLabel || item.label || 'Article',
+      Number(item.physicalClosingCount ?? item.count) || 0,
       item.unit || 'unité',
     ]);
 
