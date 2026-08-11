@@ -81,17 +81,17 @@ function buildDailySummarySheet(workbook: ExcelJS.Workbook, closure: any): void 
   const netCash = Number(closure.netCash ?? closure.net_cash) || grossRevenue - totalExpenses;
 
   sheet.getCell('A5').value = grossRevenue;
-  sheet.getCell('A5').numberFormat = `#,##0.00 "${currency}"`;
+  sheet.getCell('A5').numFmt = `#,##0.00 "${currency}"`;
   sheet.getCell('A5').font = { name: 'Arial', size: 13, bold: true, color: { argb: '15803D' } };
   sheet.getCell('A5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'DCFCE7' } };
 
   sheet.getCell('B5').value = totalExpenses;
-  sheet.getCell('B5').numberFormat = `#,##0.00 "${currency}"`;
+  sheet.getCell('B5').numFmt = `#,##0.00 "${currency}"`;
   sheet.getCell('B5').font = { name: 'Arial', size: 13, bold: true, color: { argb: 'B91C1C' } };
   sheet.getCell('B5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FEE2E2' } };
 
   sheet.getCell('C5').value = { formula: 'A5-B5', result: netCash };
-  sheet.getCell('C5').numberFormat = `#,##0.00 "${currency}"`;
+  sheet.getCell('C5').numFmt = `#,##0.00 "${currency}"`;
   sheet.getCell('C5').font = { name: 'Arial', size: 13, bold: true, color: { argb: '0F172A' } };
   sheet.getCell('C5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F1F5F9' } };
 
@@ -138,7 +138,7 @@ function buildDailySummarySheet(workbook: ExcelJS.Workbook, closure: any): void 
       sheet.mergeCells(`B${startRow}:C${startRow}`);
       sheet.getCell(`A${startRow}`).alignment = { horizontal: 'center' };
       const valCell = sheet.getCell(`D${startRow}`);
-      valCell.numberFormat = `#,##0.00 "${currency}"`;
+      valCell.numFmt = `#,##0.00 "${currency}"`;
       valCell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'B91C1C' } };
       startRow++;
     });
@@ -147,7 +147,7 @@ function buildDailySummarySheet(workbook: ExcelJS.Workbook, closure: any): void 
     sheet.mergeCells(`B${startRow}:C${startRow}`);
     sheet.getCell(`B${startRow}`).font = { name: 'Arial', size: 10, bold: true };
     const totCell = sheet.getCell(`D${startRow}`);
-    totCell.numberFormat = `#,##0.00 "${currency}"`;
+    totCell.numFmt = `#,##0.00 "${currency}"`;
     totCell.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'B91C1C' } };
   } else {
     sheet.getRow(startRow).values = ['-', 'Aucune dépense enregistrée', '', 0];
