@@ -19,17 +19,19 @@ const CORE_STOCK_ITEMS = [
 export default function DailyEntryForm() {
   const router = useRouter();
 
-  // Automatically assign manager based on PIN 1234
   const managerName = 'Tayeb';
   const [grossRevenue, setGrossRevenue] = useState<number | ''>('');
   const [notes, setNotes] = useState('');
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptImageUrl, setReceiptImageUrl] = useState<string | null>(null);
+  const [uploadingReceipt, setUploadingReceipt] = useState(false);
 
-  // Expenses (Simple: Label + Amount)
+  // Expenses
   const [expenses, setExpenses] = useState<{ label: string; amount: number | '' }[]>([
     { label: '', amount: '' },
   ]);
 
-  // Stock (Only Actual Physical Count)
+  // Stock (Physical Closing Count)
   const [stockCounts, setStockCounts] = useState<{ [key: string]: number | '' }>(
     Object.fromEntries(CORE_STOCK_ITEMS.map((item) => [item.code, '']))
   );
@@ -37,13 +39,11 @@ export default function DailyEntryForm() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Logout / Return to Welcome Menu
   const handleLogout = () => {
-    sessionStorage.removeItem('naclos_authenticated');
+    sessionStorage.clear();
     router.push('/');
   };
 
-  // Expense Handlers
   const addExpenseRow = () => setExpenses([...expenses, { label: '', amount: '' }]);
   const removeExpenseRow = (index: number) => setExpenses(expenses.filter((_, i) => i !== index));
   const updateExpense = (index: number, field: 'label' | 'amount', value: any) => {
@@ -52,12 +52,39 @@ export default function DailyEntryForm() {
     setExpenses(updated);
   };
 
-  // Stock Handler
   const updateStockCount = (code: string, value: any) => {
     setStockCounts({ ...stockCounts, [code]: value === '' ? '' : Number(value) });
   };
 
-  // Calculate Total Expenses
+  // Handle Receipt Upload
+  const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setReceiptFile(file);
+    setUploadingReceipt(true);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/upload-receipt', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setReceiptImageUrl(data.url);
+      } else {
+        alert('Erreur lors du téléchargement du reçu.');
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUploadingReceipt(false);
+    }
+  };
+
   const totalExpenses = expenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
   const netCash = (Number(grossRevenue) || 0) - totalExpenses;
 
@@ -71,8 +98,9 @@ export default function DailyEntryForm() {
     const payload = {
       businessDate: today,
       storeId: 'main',
-      managerName, // Automatically sent as Tayeb
+      managerName,
       grossRevenue: Number(grossRevenue) || 0,
+      receiptImageUrl,
       notes,
       expenses: expenses
         .filter((exp) => exp.label.trim() !== '' && Number(exp.amount) > 0)
@@ -110,14 +138,13 @@ export default function DailyEntryForm() {
 
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow-md space-y-8 text-gray-800">
-      {/* Top Header with Back Navigation */}
       <div className="flex justify-between items-center border-b pb-4">
         <button
           type="button"
           onClick={handleLogout}
           className="flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-black bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg transition"
         >
-          ← Menu Principal
+          ← Retour / Déconnexion
         </button>
         <span className="text-xs font-semibold text-gray-400">Naclos Operations</span>
       </div>
@@ -223,9 +250,19 @@ export default function DailyEntryForm() {
         </div>
       </section>
 
-      {/* 4. Remarques / Correction */}
+      {/* 4. Justificatif / Reçu Photo */}
       <section className="space-y-2">
-        <h3 className="text-lg font-semibold border-b pb-2 text-gray-800">4. Remarques / Correction (Optionnel)</h3>
+        <h3 className="text-lg font-semibold border-b pb-2 text-gray-800">4. Justificatif / Reçu (Optionnel)</h3>
+        <div className="p-4 border-2 border-dashed rounded-lg text-center bg-gray-50 space-y-2">
+          <input type="file" accept="image/*" onChange={handleReceiptUpload} className="text-sm" />
+          {uploadingReceipt && <p className="text-xs text-blue-600">Téléchargement en cours...</p>}
+          {receiptImageUrl && <p className="text-xs text-green-600 font-bold">✓ Reçu téléchargé avec succès !</p>}
+        </div>
+      </section>
+
+      {/* 5. Remarques / Correction */}
+      <section className="space-y-2">
+        <h3 className="text-lg font-semibold border-b pb-2 text-gray-800">5. Remarques / Correction (Optionnel)</h3>
         <textarea
           rows={3}
           placeholder="Une erreur s'est produite ? Un problème de caisse ou de stock ? Écrivez une note ici..."
@@ -246,7 +283,7 @@ export default function DailyEntryForm() {
       {/* Submit Button */}
       <button
         type="submit"
-        disabled={loading}
+        disabled={loading || uploadingReceipt}
         className="w-full py-3.5 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition disabled:opacity-50 text-base"
       >
         {loading ? 'Enregistrement en cours...' : 'Soumettre la Clôture du Jour'}

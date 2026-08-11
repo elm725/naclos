@@ -3,9 +3,10 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function LoginPage() {
+export default function WelcomePage() {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
+  const [authRole, setAuthRole] = useState<'tayeb' | 'admin' | null>(null);
   const router = useRouter();
 
   const handlePinSubmit = (e: React.FormEvent) => {
@@ -13,22 +14,68 @@ export default function LoginPage() {
     setError('');
 
     if (pin === '1234') {
-      // 1. Set the session token so /entry allows access
+      // Tayeb: Direct access to entry
       sessionStorage.setItem('naclos_authenticated', 'true');
-      
-      // 2. Redirect to the daily entry form
+      sessionStorage.setItem('naclos_role', 'tayeb');
       router.push('/entry');
+    } else if (pin === '9999') {
+      // Admin: Access choice menu
+      sessionStorage.setItem('naclos_authenticated', 'true');
+      sessionStorage.setItem('naclos_role', 'admin');
+      setAuthRole('admin');
     } else {
-      setError('Code PIN incorrect. Veuillez réessayer.');
+      setError('Code PIN incorrect. (Essayez 1234 ou 9999)');
     }
   };
 
+  // If Admin (9999), show selection choice
+  if (authRole === 'admin') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+        <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-md space-y-6 text-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Naclos Portal — Admin</h1>
+            <p className="text-xs text-gray-500 mt-1">Sélectionnez l'espace de votre choix</p>
+          </div>
+
+          <div className="space-y-3">
+            <button
+              onClick={() => router.push('/entry')}
+              className="w-full py-4 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition text-sm shadow-sm"
+            >
+              📝 Saisie du Jour (Clôture)
+            </button>
+
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="w-full py-4 bg-gray-100 text-gray-900 font-bold rounded-xl hover:bg-gray-200 transition text-sm border"
+            >
+              📊 Tableau de Bord (Admin Dashboard)
+            </button>
+          </div>
+
+          <button
+            onClick={() => {
+              sessionStorage.clear();
+              setAuthRole(null);
+              setPin('');
+            }}
+            className="text-xs text-red-600 hover:underline mt-4 block mx-auto"
+          >
+            Se déconnecter
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Initial PIN entry screen
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
       <div className="w-full max-w-sm bg-white p-6 rounded-xl shadow-md space-y-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900">Naclos Portal</h1>
-          <p className="text-xs text-gray-500 mt-1">Saisissez votre code PIN pour accéder</p>
+          <p className="text-xs text-gray-500 mt-1">Saisissez votre code PIN (1234 ou 9999)</p>
         </div>
 
         {error && (
@@ -42,7 +89,7 @@ export default function LoginPage() {
             <input
               type="password"
               maxLength={4}
-              placeholder="Code PIN (1234)"
+              placeholder="PIN"
               value={pin}
               onChange={(e) => setPin(e.target.value)}
               className="w-full p-3 text-center text-2xl font-mono tracking-widest border rounded-lg outline-none focus:ring-2 focus:ring-black"
