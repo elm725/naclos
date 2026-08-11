@@ -30,6 +30,7 @@ export default function SupplyEntryPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setMessage(null);
     
     const itemsBought = CORE_STOCK_ITEMS.map(item => ({
       code: item.code,
@@ -44,10 +45,17 @@ export default function SupplyEntryPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ businessDate, buyerName: 'Salem', items: itemsBought }),
       });
-      if (!res.ok) throw new Error('Erreur de soumission');
+      
+      const data = await res.json().catch(() => ({}));
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Erreur inconnue du serveur.');
+      }
+      
       setMessage({ type: 'success', text: 'Achats enregistrés avec succès !' });
       setSupplies(Object.fromEntries(CORE_STOCK_ITEMS.map((item) => [item.code, ''])));
     } catch (err: any) {
+      // This will now display the exact reason the database rejected the save
       setMessage({ type: 'error', text: err.message });
     } finally {
       setLoading(false);
@@ -67,7 +75,12 @@ export default function SupplyEntryPage() {
             <input type="date" value={businessDate} onChange={(e) => setBusinessDate(e.target.value)} className="border p-1.5 rounded-lg text-sm outline-none font-bold" />
           </div>
         </div>
-        {message && <div className={`p-4 rounded-lg text-sm font-bold ${message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>{message.text}</div>}
+        
+        {message && (
+          <div className={`p-4 rounded-lg text-sm font-bold ${message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+            {message.text}
+          </div>
+        )}
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {CORE_STOCK_ITEMS.map((item) => (
