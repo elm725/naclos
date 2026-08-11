@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js';
-import { Line } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler } from 'chart.js';
+import { Line, Bar } from 'react-chartjs-2';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -79,6 +79,26 @@ export default function AdminDashboard() {
     ],
   };
 
+  // Process Salem's purchases for the Inventory Chart
+  const inventoryVolumes: Record<string, number> = {};
+  supplies.forEach(s => {
+    (s.items || []).forEach((i: any) => {
+      inventoryVolumes[i.label] = (inventoryVolumes[i.label] || 0) + (Number(i.quantity) || 0);
+    });
+  });
+
+  const inventoryChartData = {
+    labels: Object.keys(inventoryVolumes),
+    datasets: [
+      {
+        label: 'Volume Acheté (Ce Mois)',
+        data: Object.values(inventoryVolumes),
+        backgroundColor: 'rgba(59, 130, 246, 0.8)', // Blue
+        borderRadius: 4,
+      }
+    ]
+  };
+
   const selectedClosureAttempts = selectedClosure 
     ? attempts.filter(a => a.closure_date === (selectedClosure.business_date || selectedClosure.businessDate))
     : [];
@@ -124,13 +144,35 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-2xl shadow-sm border">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Évolution des Recettes et Dépenses</h3>
-        {filteredClosures.length > 0 ? (
-          <div className="h-72"><Line data={chartData} options={{ responsive: true, maintainAspectRatio: false }} /></div>
-        ) : (
-          <p className="text-sm text-gray-400 text-center py-12">Aucune donnée disponible pour ce mois.</p>
-        )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Financial Line Chart */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Évolution des Recettes et Dépenses</h3>
+          {filteredClosures.length > 0 ? (
+            <div className="h-72"><Line data={chartData} options={{ responsive: true, maintainAspectRatio: false }} /></div>
+          ) : (
+            <p className="text-sm text-gray-400 text-center py-12">Aucune donnée disponible.</p>
+          )}
+        </div>
+
+        {/* NEW: Inventory Bar Chart */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Volume des Achats (Marchandise Salem)</h3>
+          {Object.keys(inventoryVolumes).length > 0 ? (
+            <div className="h-72">
+               <Bar 
+                 data={inventoryChartData} 
+                 options={{ 
+                   responsive: true, 
+                   maintainAspectRatio: false,
+                   scales: { y: { beginAtZero: true } }
+                 }} 
+               />
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 text-center py-12">Aucun achat enregistré ce mois par Salem.</p>
+          )}
+        </div>
       </div>
 
       {/* CLÔTURES (TAYEB) SECTION */}
@@ -338,7 +380,7 @@ export default function AdminDashboard() {
                       <div key={idx} className="bg-red-50 p-4 rounded-xl border border-red-200 text-sm">
                         <div className="flex justify-between border-b border-red-200 pb-2 mb-2">
                           <span className="font-bold text-red-800">Tentative {selectedClosureAttempts.length - idx - 1}</span>
-                          <span className="text-xs text-red-600">{new Date(attempt.created_at).toLocaleString('fr-FR')}</span>
+                          <span className="text-xs text-red-600">{new Date(attempt.created_at).toLocaleTimeString()}</span>
                         </div>
                         <ul className="space-y-1 text-red-900">
                           <li><strong>Ancienne Recette Brute:</strong> {data.grossRevenue} MAD</li>
