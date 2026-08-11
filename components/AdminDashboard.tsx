@@ -109,7 +109,7 @@ export default function AdminDashboard() {
 
   const selectedClosureDate = selectedClosure ? (selectedClosure.business_date || selectedClosure.businessDate) : null;
   const selectedClosureAttempts = selectedClosureDate 
-    ? attempts.filter(a => (a.closure_date || a.business_date || '').startsWith(selectedClosureDate))
+    ? attempts.filter(a => (a.closure_date || '').startsWith(selectedClosureDate))
     : [];
 
   return (
@@ -200,7 +200,7 @@ export default function AdminDashboard() {
               <tbody className="divide-y">
                 {filteredClosures.map((c) => {
                   const bDate = c.business_date || c.businessDate;
-                  const dayAttempts = attempts.filter(a => (a.closure_date || a.business_date || '').startsWith(bDate));
+                  const dayAttempts = attempts.filter(a => (a.closure_date || '').startsWith(bDate));
                   const realTime = new Date(c.submitted_at || c.created_at || new Date()).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
                   
                   return (
@@ -376,7 +376,7 @@ export default function AdminDashboard() {
                 <div className="space-y-4">
                   {selectedClosureAttempts.map((attempt, idx) => {
                     const data = attempt.attempted_data || attempt;
-                    const expTotal = (data.expenses || []).reduce((sum: number, e: any) => sum + (Number(e.amount) || 0), 0);
+                    const expTotal = (data.expenses || []).reduce((sum: number, e:any) => sum + (Number(e.amount) || 0), 0);
                     return (
                       <div key={idx} className="bg-red-50 p-4 rounded-xl border border-red-200 text-sm">
                         <div className="flex justify-between border-b border-red-200 pb-2 mb-2">
