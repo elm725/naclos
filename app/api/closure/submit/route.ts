@@ -107,8 +107,12 @@ export async function POST(request: NextRequest) {
           attempted_data: oldDataSnapshot,
         });
 
+        // STRICT HALT: If backup fails, abort the entire submission and show the error!
         if (backupError) {
           console.error('Failed to backup old closure data:', backupError);
+          return NextResponse.json({ 
+            error: `Erreur critique: Impossible de sauvegarder l'historique. Raison: ${backupError.message}` 
+          }, { status: 500 });
         }
       }
 
