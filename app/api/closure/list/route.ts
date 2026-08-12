@@ -1,34 +1,42 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/supabaseClient';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdminClient();
-
-    // Fetch all closures AND their connected expenses, advances, and stock codes
-    const { data, error } = await supabase
+    
+    const { data: closures, error } = await supabase
       .from('daily_closures')
-      .select(`
-        *,
-        expenses (*),
-        staff_advances (*),
-        inventory_logs (
-          *,
-          raw_materials (code)
-        )
-      `)
+      .select('*')
       .order('business_date', { ascending: false });
 
     if (error) {
-      console.error('Erreur Supabase:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('Error listing closures:', error);
+      return NextResponse.json({ closures: [], error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ closures: data });
+    const closuresWithDetails = await Promise.all(
+      (closures || []).map(async (c) => {
+        const [expRes, advRes, invRes] = await Promise.all([
+          supabase.from('expenses').select('*').eq('closure_id', c.id),
+          supabase.from('staff_advances').select('*').eq('closure_id', c.id),
+          supabase.from('inventory_logs').select('*, raw_materials(code, label_fr)').eq('closure_id', c.id)
+        ]);
+
+        return {
+          ...c,
+          expenses: expRes.data || c.expenses || [],
+          staffAdvances: advRes.data || c.staff_advances || c.staffAdvances || [],
+          inventory_logs: invRes.data || c.inventory || []
+        };
+      })
+    );
+
+    return NextResponse.json({ closures: closuresWithDetails });
   } catch (err: any) {
-    console.error('Erreur API:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('Closure List API Error:', err);
+    return NextResponse.json({ closures: [], error: err.message }, { status: 500 });
   }
 }
