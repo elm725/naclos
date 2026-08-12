@@ -29,14 +29,26 @@ export default function AdminDashboard() {
   const fetchData = async () => {
     setLoading(true);
     setFetchError(null);
-    const timestamp = Date.now();
     try {
       const timestamp = Date.now();
+      
+      // Strict headers to force Vercel to bypass all cache layers
+      const fetchOptions = {
+        cache: 'no-store' as RequestCache,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      };
+
       const [closuresRes, attemptsRes, supplyRes] = await Promise.all([
-        fetch(`/api/closure/list?_t=${timestamp}`, { cache: 'no-store' }).catch(() => null),
-        fetch(`/api/dashboard/attempts?month=${selectedMonth}&_t=${timestamp}`, { cache: 'no-store' }).catch(() => null),
-        fetch(`/api/supply?month=${selectedMonth}&_t=${timestamp}`, { cache: 'no-store' }).catch(() => null)
+        // Added month=${selectedMonth} to match the Salem supply pattern
+        fetch(`/api/closure/list?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null),
+        fetch(`/api/dashboard/attempts?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null),
+        fetch(`/api/supply?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null)
       ]);
+      
       const errors: string[] = [];
 
       if (closuresRes && closuresRes.ok) {
