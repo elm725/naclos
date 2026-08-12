@@ -39,12 +39,12 @@ export default function DailyEntryForm() {
   const [availableStaff, setAvailableStaff] = useState<string[]>([]);
 
   // Expenses state updated to handle dropdown + custom text
-  const [expenses, setExpenses] = useState<{ category: string; customLabel: string; amount: number | '' }>([
+  const [expenses, setExpenses] = useState<{ category: string; customLabel: string; amount: number | '' }[]>([
     { category: '', customLabel: '', amount: '' },
   ]);
 
   // Staff Advances state updated to handle dropdown + custom text
-  const [staffAdvances, setStaffAdvances] = useState<{ selection: string; customName: string; amount: number | '' }>([
+  const [staffAdvances, setStaffAdvances] = useState<{ selection: string; customName: string; amount: number | '' }[]>([
     { selection: '', customName: '', amount: '' },
   ]);
 
