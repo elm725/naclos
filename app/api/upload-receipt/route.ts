@@ -1,24 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/supabaseClient';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
     if (!file) {
-      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+      return NextResponse.json({ error: 'Aucun fichier fourni.' }, { status: 400 });
     }
 
     const supabase = getSupabaseAdminClient();
-    const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
+
+    // 1. Sanitize file name and create a clean path (NO leading slash)
+    const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const filePath = `receipts/${Date.now()}_${safeFileName}`;
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
+    // 2. Upload to Supabase Storage
     const { data, error } = await supabase.storage
-      .from('receipts') // Must match your Supabase bucket name
-      .upload(fileName, buffer, {
+      .from('receipts') // Make sure this bucket exists in your Supabase project
+      .upload(filePath, buffer, {
         contentType: file.type,
         upsert: true,
       });
@@ -28,14 +34,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Get public URL
+    // 3. Get Public URL
     const { data: publicUrlData } = supabase.storage
       .from('receipts')
-      .getPublicUrl(data.path);
+      .getPublicUrl(filePath);
 
-    return NextResponse.json({ success: true, url: publicUrlData.publicUrl });
+    return NextResponse.json({ url: publicUrlData.publicUrl });
   } catch (err: any) {
-    console.error('Upload route error:', err);
+    console.error('Upload API Error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
