@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdminClient } from '@/lib/supabaseClient';
+import { getSupabaseAdminClient, getSupabaseProjectRef } from '@/lib/supabaseClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +39,20 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    return NextResponse.json({ closures: closuresWithDetails }, { headers: noStoreHeaders });
+    return NextResponse.json(
+      {
+        closures: closuresWithDetails,
+        meta: {
+          projectRef: getSupabaseProjectRef(),
+          rowCount: closuresWithDetails.length,
+          businessDates: closuresWithDetails.map((closure) => closure.business_date),
+          queriedAt: new Date().toISOString(),
+          vercelGitCommitSha: process.env.VERCEL_GIT_COMMIT_SHA || null,
+          vercelEnvironment: process.env.VERCEL_ENV || null,
+        },
+      },
+      { headers: noStoreHeaders }
+    );
   } catch (err: any) {
     return NextResponse.json({ closures: [], error: err.message }, { status: 500, headers: noStoreHeaders });
   }

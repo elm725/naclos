@@ -28,6 +28,14 @@ function readSupabaseUrl(): string {
   }
 }
 
+export function getSupabaseProjectRef(): string {
+  try {
+    return new URL(readSupabaseUrl()).hostname.split('.')[0] || 'unknown';
+  } catch {
+    return 'invalid-url';
+  }
+}
+
 /**
  * Browser-safe client — uses the anon key.
  */

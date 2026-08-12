@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdminClient } from '@/lib/supabaseClient';
+import { getSupabaseAdminClient, getSupabaseProjectRef } from '@/lib/supabaseClient';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -11,16 +11,6 @@ const noStoreHeaders = {
   Pragma: 'no-cache',
   Expires: '0',
 };
-
-function getSupabaseProjectRef(): string {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^['"]|['"]$/g, '') || '';
-
-  try {
-    return new URL(url).hostname.split('.')[0] || 'unknown';
-  } catch {
-    return 'invalid-url';
-  }
-}
 
 function isAuthorized(request: NextRequest): boolean {
   const configuredSecret = process.env.ADMIN_UNLOCK_SECRET?.trim();
