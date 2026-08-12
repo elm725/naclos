@@ -1,8 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/supabaseClient';
-import { monthRange } from '@/lib/dateRange';
 
 export const dynamic = 'force-dynamic';
+
+function getMonthRange(monthStr: string) {
+  const [yearStr, monthStrNum] = monthStr.split('-');
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStrNum, 10);
+  const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+  
+  let nextYear = year;
+  let nextMonth = month + 1;
+  if (nextMonth > 12) {
+    nextMonth = 1;
+    nextYear += 1;
+  }
+  const endDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+  return { start: startDate, end: endDate };
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,7 +31,7 @@ export async function GET(request: NextRequest) {
       .order('business_date', { ascending: false });
 
     if (month) {
-      const { start, end } = monthRange(month);
+      const { start, end } = getMonthRange(month);
       query = query.gte('business_date', start).lt('business_date', end);
     }
 
@@ -44,7 +59,6 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    // Temporary debug return to check the project URL
     return NextResponse.json({ 
       debug: 'Check me!', 
       project_url: process.env.NEXT_PUBLIC_SUPABASE_URL,
