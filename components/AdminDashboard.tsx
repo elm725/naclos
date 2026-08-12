@@ -10,7 +10,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarEleme
 export default function AdminDashboardPage() {
   const router = useRouter();
 
-  // SECURITY GUARD
+  // SECURITY GUARD: Ensures only logged-in Admin can access
   useEffect(() => {
     const authRole = sessionStorage.getItem('naclos_role');
     const isAuth = sessionStorage.getItem('naclos_authenticated');
@@ -34,6 +34,7 @@ export default function AdminDashboardPage() {
   
   const [selectedClosure, setSelectedClosure] = useState<any | null>(null);
 
+  // --- MONTHLY SUMMARY STATE ---
   const [fixedExpenses, setFixedExpenses] = useState<{id: string | number, label: string, amount: number}[]>([]);
   const [staffSalaries, setStaffSalaries] = useState<{id: string | number, name: string, baseSalary: number}[]>([]);
   const [isSavingSummary, setIsSavingSummary] = useState(false);
@@ -183,7 +184,7 @@ export default function AdminDashboardPage() {
 
   const inventoryVolumes: Record<string, number> = {};
   supplies.forEach(s => {
-    (s.items || []).forEach((i: any) => {
+    (s.items || s.supply_items || []).forEach((i: any) => {
       const itemName = i.label || i.code;
       if (itemName) {
         inventoryVolumes[itemName] = (inventoryVolumes[itemName] || 0) + (Number(i.quantity) || 0);
@@ -284,15 +285,59 @@ export default function AdminDashboardPage() {
           )}
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Volume des Achats (Marchandise Salem)</h3>
+        {/* Volume chart */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border space-y-6">
+          <h3 className="text-lg font-bold text-gray-900">Volume des Achats (Marchandise Salem)</h3>
           {Object.keys(inventoryVolumes).length > 0 ? (
-            <div className="h-[450px]">
+            <div className="h-[350px]">
                <Bar data={inventoryChartData} options={{ responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }} />
             </div>
           ) : (
             <p className="text-sm text-gray-400 text-center py-12">Aucun achat enregistré ce mois par Salem.</p>
           )}
+
+          {/* DETAILED DAILY PURCHASES TABLE */}
+          <div className="border-t pt-6 space-y-4">
+            <h4 className="text-base font-bold text-gray-800">Détails Journaliers des Achats ({supplies.length})</h4>
+            {supplies.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b text-xs text-gray-400 uppercase">
+                      <th className="pb-3">Date d'Achat</th>
+                      <th className="pb-3">Acheteur</th>
+                      <th className="pb-3">Articles & Quantités Achetées</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {supplies.map((s, idx) => {
+                      const sDate = s.business_date || s.businessDate || s.date;
+                      const buyer = s.buyer_name || s.buyerName || 'Salem';
+                      const itemsList = s.items || s.supply_items || [];
+
+                      return (
+                        <tr key={s.id || idx} className="hover:bg-gray-50">
+                          <td className="py-3 font-bold">{sDate}</td>
+                          <td className="py-3 font-semibold text-gray-600">{buyer}</td>
+                          <td className="py-3">
+                            <div className="flex flex-wrap gap-2">
+                              {itemsList.map((item: any, i: number) => (
+                                <span key={i} className="bg-blue-50 text-blue-800 text-xs px-2.5 py-1 rounded-lg border border-blue-100 font-bold">
+                                  {item.label || item.code}: <span className="font-mono text-blue-900">{item.quantity} {item.unit || ''}</span>
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 italic text-center py-4">Aucune saisie d'achat détaillée pour ce mois.</p>
+            )}
+          </div>
         </div>
       </div>
 
