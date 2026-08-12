@@ -59,30 +59,58 @@ export async function POST(request: NextRequest) {
 
   const supabase = getSupabaseAdminClient();
 
-  // 1. ALWAYS log the exact incoming data as a submission attempt into closure_submission_attempts
-  await supabase.from('closure_submission_attempts').insert({
-    closure_date: payload.businessDate,
-    submitted_by: payload.managerName,
-    attempted_data: rawJson,
-  });
+  // 1. ALWAYS log the exact incoming data as a submission attempt
+  try {
+    const { error: attemptError } = await supabase.from('closure_submission_attempts').insert({
+      closure_date: payload.businessDate,
+      submitted_by: payload.managerName,
+      attempted_data: rawJson,
+    });
+    if (attemptError) console.error('Failed to log submission attempt:', attemptError);
+  } catch (err) {
+    console.error('Attempt logging threw:', err);
+    // Don't block the actual save just because logging failed
+  }
 
-  // 2. Check if a closure already exists to OVERWRITE it instead of failing
-  const { data: existing } = await supabase
-    .from('daily_closures')
-    .select('id')
-    .eq('business_date', payload.businessDate)
-    .eq('store_id', payload.storeId)
-    .maybeSingle();
+  // 2. Check if a closure already exists — wrapped so failures here surface as a real error, not a silent 500
+  let existing: { id: string } | null = null;
+  try {
+    const { data, error } = await supabase
+      .from('daily_closures')
+      .select('id')
+      .eq('business_date', payload.businessDate)
+      .eq('store_id', payload.storeId)
+      .maybeSingle();
+    if (error) {
+      console.error('Failed to check existing closure:', error);
+      return NextResponse.json({ error: `Échec de vérification: ${error.message}` }, { status: 500 });
+    }
+    existing = data;
 
-  if (existing) {
-    // Manually clean up old child records to prevent conflicts
-    await supabase.from('expenses').delete().eq('closure_id', existing.id);
-    await supabase.from('staff_advances').delete().eq('closure_id', existing.id);
-    await supabase.from('inventory_logs').delete().eq('closure_id', existing.id);
-    await supabase.from('menu_sales').delete().eq('closure_id', existing.id);
-    await supabase.from('report_deliveries').delete().eq('closure_id', existing.id);
-    await supabase.from('audit_log').delete().eq('closure_id', existing.id);
-    await supabase.from('daily_closures').delete().eq('id', existing.id);
+    if (existing) {
+      // Clean up old child records before re-inserting
+      const cleanupResults = await Promise.all([
+        supabase.from('expenses').delete().eq('closure_id', existing.id),
+        supabase.from('staff_advances').delete().eq('closure_id', existing.id),
+        supabase.from('inventory_logs').delete().eq('closure_id', existing.id),
+        supabase.from('menu_sales').delete().eq('closure_id', existing.id),
+        supabase.from('report_deliveries').delete().eq('closure_id', existing.id),
+        supabase.from('audit_log').delete().eq('closure_id', existing.id),
+      ]);
+      const cleanupError = cleanupResults.find((r) => r.error);
+      if (cleanupError?.error) {
+        console.error('Cleanup failed, aborting to avoid data loss:', cleanupError.error);
+        return NextResponse.json({ error: `Échec du nettoyage: ${cleanupError.error.message}` }, { status: 500 });
+      }
+      const { error: deleteError } = await supabase.from('daily_closures').delete().eq('id', existing.id);
+      if (deleteError) {
+        console.error('Failed to delete old closure:', deleteError);
+        return NextResponse.json({ error: `Échec de suppression: ${deleteError.message}` }, { status: 500 });
+      }
+    }
+  } catch (err: any) {
+    console.error('Existing-closure check/cleanup threw:', err);
+    return NextResponse.json({ error: `Erreur inattendue: ${err.message}` }, { status: 500 });
   }
 
   const totals = computeClosureTotals(payload);
@@ -98,74 +126,3 @@ export async function POST(request: NextRequest) {
       gross_revenue: payload.grossRevenue,
       total_expenses: totals.totalExpenses,
       total_staff_advances: totals.totalStaffAdvances,
-      net_cash: totals.netCash,
-      net_profit: totals.netProfit,
-      has_inventory_discrepancy: totals.hasInventoryDiscrepancy,
-      discrepancy_summary: payload.notes || totals.discrepancySummary,
-      status: 'submitted',
-      submitted_at: new Date().toISOString(),
-    })
-    .select()
-    .single();
-
-  if (closureError || !closure) {
-    return NextResponse.json({ error: 'Failed to save closure' }, { status: 500 });
-  }
-
-  const closureId = closure.id;
-
-  try {
-    // 4. Insert fresh child records
-    if (payload.expenses.length > 0) {
-      const validExpenses = payload.expenses.filter((e) => e.label && e.amount > 0);
-      if (validExpenses.length > 0) {
-        await supabase.from('expenses').insert(
-          validExpenses.map((e) => ({ closure_id: closureId, label: e.label, amount: e.amount }))
-        );
-      }
-    }
-
-    if (payload.staffAdvances.length > 0) {
-      const validAdvances = payload.staffAdvances.filter((a) => a.employeeName && a.amount > 0);
-      if (validAdvances.length > 0) {
-        await supabase.from('staff_advances').insert(
-          validAdvances.map((a) => ({ closure_id: closureId, employee_name: a.employeeName, amount: a.amount, note: a.note }))
-        );
-      }
-    }
-
-    if (payload.inventory.length > 0) {
-      const { data: materials } = await supabase.from('raw_materials').select('id, code');
-      const matMap = Object.fromEntries((materials || []).map((m: any) => [m.code, m.id]));
-      const validInventory = payload.inventory.filter((i) => i.materialCode && matMap[i.materialCode]);
-
-      if (validInventory.length > 0) {
-        await supabase.from('inventory_logs').insert(
-          validInventory.map((i) => ({
-            closure_id: closureId,
-            raw_material_id: matMap[i.materialCode],
-            physical_closing_count: i.physicalClosingCount,
-          }))
-        );
-      }
-    }
-
-    await supabase.from('audit_log').insert({
-      closure_id: closureId,
-      actor: payload.managerName,
-      action: existing ? 'resubmit' : 'submit',
-      detail: { notes: payload.notes },
-    });
-
-    const reportUrl = new URL('/api/reports/email', request.url);
-    fetch(reportUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-cron-secret': process.env.CRON_SECRET || '' },
-      body: JSON.stringify({ closureId }),
-    }).catch(console.error);
-
-    return NextResponse.json({ success: true, closureId });
-  } catch (err) {
-    return NextResponse.json({ error: 'Child processing failed' }, { status: 500 });
-  }
-}
