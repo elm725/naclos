@@ -14,18 +14,26 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdminClient();
 
-    // 1. Sanitize file name and create a clean path (NO leading slash)
-    const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filePath = `receipts/${Date.now()}_${safeFileName}`;
+    // 1. Absolute safety check for filename
+    const rawName = file.name || `receipt_${Date.now()}.png`;
+
+    // 2. Strip all accents, spaces, and dangerous characters completely
+    const cleanName = rawName
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9.-]/g, '_');
+
+    // 3. Guarantee a clean relative path with NO leading slash and NO double slashes
+    const filePath = `receipts/${Date.now()}_${cleanName}`;
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // 2. Upload to Supabase Storage
+    // 4. Upload to Supabase Storage
     const { data, error } = await supabase.storage
-      .from('receipts') // Make sure this bucket exists in your Supabase project
+      .from('receipts')
       .upload(filePath, buffer, {
-        contentType: file.type,
+        contentType: file.type || 'image/png',
         upsert: true,
       });
 
@@ -34,14 +42,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // 3. Get Public URL
+    // 5. Retrieve Public URL safely
     const { data: publicUrlData } = supabase.storage
       .from('receipts')
       .getPublicUrl(filePath);
 
     return NextResponse.json({ url: publicUrlData.publicUrl });
   } catch (err: any) {
-    console.error('Upload API Error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('Upload Route Error:', err);
+    return NextResponse.json({ error: err.message || 'Erreur interne' }, { status: 500 });
   }
 }
