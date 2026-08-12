@@ -1,16 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/supabaseClient';
+import { monthRange } from '@/lib/dateRange';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const month = searchParams.get('month');
+
     const supabase = getSupabaseAdminClient();
-    
-    const { data: closures, error } = await supabase
+    let query = supabase
       .from('daily_closures')
       .select('*')
       .order('business_date', { ascending: false });
+
+    if (month) {
+      const { start, end } = monthRange(month);
+      query = query.gte('business_date', start).lt('business_date', end);
+    }
+
+    const { data: closures, error } = await query;
 
     if (error) {
       console.error('Error listing closures:', error);
@@ -39,4 +49,9 @@ export async function GET(request: NextRequest) {
     console.error('Closure List API Error:', err);
     return NextResponse.json({ closures: [], error: err.message }, { status: 500 });
   }
-}
+}// Add this temporary return
+return NextResponse.json({ 
+  debug: 'Check me!', 
+  project_url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  closures: closuresWithDetails 
+});
