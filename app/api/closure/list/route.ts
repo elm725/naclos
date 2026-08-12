@@ -6,18 +6,28 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdminClient();
-    
-    // Fetch all closures without restrictive month filters so nothing gets hidden
-    const { data: closures, error } = await supabase
+
+    // 1. Fetch confirmed daily closures
+    const { data: closures, error: closuresError } = await supabase
       .from('daily_closures')
       .select('*')
       .order('business_date', { ascending: false });
 
-    if (error) {
-      console.error('Error listing closures:', error);
-      return NextResponse.json({ closures: [], error: error.message }, { status: 500 });
+    if (closuresError) {
+      console.error('Error fetching closures:', closuresError);
     }
 
+    // 2. Fetch submission attempts so staff submissions are never hidden
+    const { data: attempts, error: attemptsError } = await supabase
+      .from('closure_submission_attempts')
+      .select('*')
+      .order('attempted_at', { ascending: false });
+
+    if (attemptsError) {
+      console.error('Error fetching attempts:', attemptsError);
+    }
+
+    // Map closures with their child details
     const closuresWithDetails = await Promise.all(
       (closures || []).map(async (c) => {
         const [expRes, advRes, invRes] = await Promise.all([
@@ -34,6 +44,33 @@ export async function GET(request: NextRequest) {
         };
       })
     );
+
+    // 3. Bridge any submission attempts that didn't land in daily_closures directly onto the dashboard
+    const existingDates = new Set(closuresWithDetails.map(c => c.business_date || c.businessDate));
+    
+    for (const att of (attempts || [])) {
+      const attDate = att.closure_date || (att.attempted_data && (att.attempted_data.businessDate || att.attempted_data.business_date));
+      if (attDate && !existingDates.has(attDate)) {
+        const data = att.attempted_data || {};
+        const grossRev = Number(data.grossRevenue || data.gross_revenue || 0);
+        const expensesList = data.expenses || [];
+        const totalExp = expensesList.reduce((s: number, e: any) => s + (Number(e.amount) || 0), 0);
+
+        closuresWithDetails.push({
+          id: att.id || 'att-' + Math.random(),
+          business_date: attDate,
+          gross_revenue: grossRev,
+          total_expenses: totalExp,
+          net_cash: grossRev - totalExp,
+          expenses: expensesList,
+          staffAdvances: data.staffAdvances || data.staff_advances || [],
+          inventory_logs: data.inventory || data.inventory_logs || [],
+          notes: data.notes || 'Soumission en attente',
+          submitted_at: att.attempted_at || new Date().toISOString()
+        });
+        existingDates.add(attDate);
+      }
+    }
 
     return NextResponse.json({ closures: closuresWithDetails });
   } catch (err: any) {
