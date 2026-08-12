@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
       business_date: payload.businessDate,
       store_id: payload.storeId,
       manager_name: payload.managerName,
-      receipt_image_url: payload.receiptImageUrl ?? null,
+      receipt_image_url: payload.receiptImageUrl || null,
       gross_revenue: payload.grossRevenue,
       total_expenses: totals.totalExpenses,
       total_staff_advances: totals.totalStaffAdvances,
