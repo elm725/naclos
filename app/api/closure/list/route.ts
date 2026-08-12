@@ -72,7 +72,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ closures: closuresWithDetails });
+    return NextResponse.json({ 
+      connected_to: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      closures: closuresWithDetails 
+    });
   } catch (err: any) {
     console.error('Closure List API Error:', err);
     return NextResponse.json({ closures: [], error: err.message }, { status: 500 });
