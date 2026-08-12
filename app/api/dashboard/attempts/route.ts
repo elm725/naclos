@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const month = searchParams.get('month');
 
     const supabase = getSupabaseAdminClient();
-    let query = supabase.from('closure_submission_attempts').select('*').order('created_at', { ascending: false });
+    let query = supabase.from('closure_submission_attempts').select('*').order('attempted_at', { ascending: false });
 
     if (month) {
       const { start, end } = monthRange(month);

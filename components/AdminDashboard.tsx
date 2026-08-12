@@ -425,7 +425,7 @@ export default function AdminDashboard() {
                       <div key={idx} className="bg-red-50 p-4 rounded-xl border border-red-200 text-sm">
                         <div className="flex justify-between border-b border-red-200 pb-2 mb-2">
                           <span className="font-bold text-red-800">Tentative #{idx + 1}</span>
-                          <span className="text-xs text-red-600">{new Date(attempt.created_at || attempt.submitted_at || new Date()).toLocaleTimeString()}</span>
+                          <span className="text-xs text-red-600">{new Date(attempt.attempted_at || new Date()).toLocaleTimeString()}</span>
                         </div>
                         <ul className="space-y-1 text-red-900">
                           <li><strong>Recette Brute:</strong> {data.grossRevenue || data.gross_revenue} MAD</li>
