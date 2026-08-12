@@ -6,18 +6,14 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdminClient();
-
-    // Fetch confirmed daily closures only
+    
     const { data: closures, error: closuresError } = await supabase
       .from('daily_closures')
       .select('*')
       .order('business_date', { ascending: false });
 
-    if (closuresError) {
-      console.error('Error fetching closures:', closuresError);
-    }
+    if (closuresError) throw closuresError;
 
-    // Map closures with their child details
     const closuresWithDetails = await Promise.all(
       (closures || []).map(async (c) => {
         const [expRes, advRes, invRes] = await Promise.all([
@@ -28,28 +24,19 @@ export async function GET(request: NextRequest) {
 
         return {
           ...c,
-          expenses: expRes.data || c.expenses || [],
-          staffAdvances: advRes.data || c.staff_advances || c.staffAdvances || [],
-          inventory_logs: invRes.data || c.inventory || []
+          expenses: expRes.data || [],
+          staffAdvances: advRes.data || [],
+          inventory_logs: invRes.data || []
         };
       })
     );
 
-    return NextResponse.json(
-      { 
-        connected_to: process.env.NEXT_PUBLIC_SUPABASE_URL,
-        closures: closuresWithDetails 
-      },
-      {
-        headers: {
-          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0',
-        },
+    return NextResponse.json({ closures: closuresWithDetails }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
       }
-    );
+    });
   } catch (err: any) {
-    console.error('Closure List API Error:', err);
     return NextResponse.json({ closures: [], error: err.message }, { status: 500 });
   }
 }

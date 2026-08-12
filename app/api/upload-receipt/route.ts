@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/supabaseClient';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -10,16 +12,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Aucun fichier fourni.' }, { status: 400 });
     }
 
-    // Simplest possible filename: just a timestamp and the original extension
     const extension = file.name.split('.').pop() || 'png';
     const filePath = `${Date.now()}_receipt.${extension}`;
 
+    // Convert Web File to Node Buffer (Required for Vercel/Supabase Server-Side Uploads)
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
     const supabase = getSupabaseAdminClient();
 
-    // Pass the Web File object directly. No Buffers.
     const { error } = await supabase.storage
       .from('receipts')
-      .upload(filePath, file, {
+      .upload(filePath, buffer, {
+        contentType: file.type || 'image/png',
         upsert: true,
       });
 
