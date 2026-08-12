@@ -13,6 +13,7 @@ export default function AdminDashboard() {
   const [attempts, setAttempts] = useState<any[]>([]);
   const [supplies, setSupplies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7));
   const [selectedClosure, setSelectedClosure] = useState<any | null>(null);
 
@@ -22,6 +23,7 @@ export default function AdminDashboard() {
 
   const fetchData = async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const [closuresRes, attemptsRes, supplyRes] = await Promise.all([
         fetch('/api/closure/list').catch(() => null),
@@ -29,20 +31,47 @@ export default function AdminDashboard() {
         fetch(`/api/supply?month=${selectedMonth}`).catch(() => null)
       ]);
 
+      const errors: string[] = [];
+
       if (closuresRes && closuresRes.ok) {
         const cData = await closuresRes.json();
         setClosures(cData.closures || cData || []);
+      } else if (closuresRes) {
+        const text = await closuresRes.text().catch(() => '');
+        console.error('Closures fetch failed:', closuresRes.status, text);
+        errors.push(`Clôtures (${closuresRes.status})`);
+      } else {
+        errors.push('Clôtures (réseau)');
       }
+
       if (attemptsRes && attemptsRes.ok) {
         const attData = await attemptsRes.json();
         setAttempts(attData.attempts || attData || []);
+      } else if (attemptsRes) {
+        const text = await attemptsRes.text().catch(() => '');
+        console.error('Attempts fetch failed:', attemptsRes.status, text);
+        errors.push(`Tentatives (${attemptsRes.status})`);
+      } else {
+        errors.push('Tentatives (réseau)');
       }
+
       if (supplyRes && supplyRes.ok) {
         const sData = await supplyRes.json();
         setSupplies(sData.supplies || sData || []);
+      } else if (supplyRes) {
+        const text = await supplyRes.text().catch(() => '');
+        console.error('Supply fetch failed:', supplyRes.status, text);
+        errors.push(`Achats (${supplyRes.status})`);
+      } else {
+        errors.push('Achats (réseau)');
+      }
+
+      if (errors.length > 0) {
+        setFetchError(`Échec de récupération : ${errors.join(', ')}`);
       }
     } catch (err) {
       console.error('Error fetching data:', err);
+      setFetchError('Erreur inattendue lors de la récupération des données.');
     } finally {
       setLoading(false);
     }
@@ -61,7 +90,7 @@ export default function AdminDashboard() {
   const totalRevenue = filteredClosures.reduce((sum, c) => sum + (Number(c.gross_revenue ?? c.grossRevenue) || 0), 0);
   const totalExpenses = filteredClosures.reduce((sum, c) => sum + (Number(c.total_expenses ?? c.totalExpenses) || 0), 0);
   const totalNetCash = filteredClosures.reduce((sum, c) => sum + (Number(c.net_cash ?? c.netCash) || 0), 0);
-  
+
   const daysCount = filteredClosures.length || 1;
   const avgDailyRevenue = totalRevenue / daysCount;
   const avgDailyExpenses = totalExpenses / daysCount;
@@ -87,6 +116,8 @@ export default function AdminDashboard() {
     ],
   };
 
+  // NOTE: supplies are already scoped to `selectedMonth` server-side (see /api/supply GET),
+  // so we don't need to re-filter by date here — we just aggregate quantities by item.
   const inventoryVolumes: Record<string, number> = {};
   supplies.forEach(s => {
     (s.items || []).forEach((i: any) => {
@@ -108,7 +139,7 @@ export default function AdminDashboard() {
   };
 
   const selectedClosureDate = selectedClosure ? (selectedClosure.business_date || selectedClosure.businessDate) : null;
-  const selectedClosureAttempts = selectedClosureDate 
+  const selectedClosureAttempts = selectedClosureDate
     ? attempts.filter(a => (a.closure_date || '').startsWith(selectedClosureDate))
     : [];
 
@@ -128,6 +159,17 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {fetchError && (
+        <div className="bg-red-50 border border-red-200 text-red-800 text-sm font-semibold px-4 py-3 rounded-xl">
+          ⚠️ {fetchError} — vérifiez la console pour plus de détails, ou réessayez.
+          <button onClick={fetchData} className="ml-3 underline font-bold">Réessayer</button>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="text-center text-sm text-gray-400 py-6">Chargement des données…</div>
+      ) : (
+      <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-1">
           <span className="text-xs text-gray-400 font-bold uppercase">Total Net Cash (Mois)</span>
@@ -167,13 +209,13 @@ export default function AdminDashboard() {
           <h3 className="text-lg font-bold text-gray-900 mb-4">Volume des Achats (Marchandise Salem)</h3>
           {Object.keys(inventoryVolumes).length > 0 ? (
             <div className="h-[450px]">
-               <Bar 
-                 data={inventoryChartData} 
-                 options={{ 
-                   responsive: true, 
+               <Bar
+                 data={inventoryChartData}
+                 options={{
+                   responsive: true,
                    maintainAspectRatio: false,
                    scales: { y: { beginAtZero: true } }
-                 }} 
+                 }}
                />
             </div>
           ) : (
@@ -202,7 +244,7 @@ export default function AdminDashboard() {
                   const bDate = c.business_date || c.businessDate;
                   const dayAttempts = attempts.filter(a => (a.closure_date || '').startsWith(bDate));
                   const realTime = new Date(c.submitted_at || c.created_at || new Date()).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
-                  
+
                   return (
                     <tr key={c.id || bDate} className="hover:bg-gray-50">
                       <td className="py-3 font-bold">{bDate}</td>
@@ -279,6 +321,8 @@ export default function AdminDashboard() {
           <p className="text-xs text-gray-500 italic">Aucun achat enregistré ce mois-ci par Salem.</p>
         )}
       </div>
+      </>
+      )}
 
       {selectedClosure && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
@@ -339,7 +383,7 @@ export default function AdminDashboard() {
                       'tortilla': 'Tortilla', 'burger': 'Pain Burger', 'soda': 'Soda', 'eau_p': 'Eau (P)', 'eau_g': 'Eau (G)'
                     };
                     const label = i.materialLabel || fallbackLabels[code] || code || 'Article';
-                    
+
                     return (
                       <div key={idx} className="p-2 bg-gray-50 rounded border text-xs">
                         <span className="block font-semibold text-gray-600">{label}</span>
