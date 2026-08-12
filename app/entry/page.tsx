@@ -13,6 +13,7 @@ const CORE_STOCK_ITEMS = [
   { code: 'soda', label: 'Soda', unit: 'unit' },
   { code: 'eau_p', label: 'Eau (Petite)', unit: 'unit' },
   { code: 'eau_g', label: 'Eau (Grande)', unit: 'unit' },
+  { code: 'fruit_de_mer', label: 'Fruits de Mer', unit: 'kg' },
 ];
 
 export default function DailyEntryForm() {

@@ -43,7 +43,6 @@ export default function AdminDashboard() {
       };
 
       const [closuresRes, attemptsRes, supplyRes] = await Promise.all([
-        // Added month=${selectedMonth} to match the Salem supply pattern
         fetch(`/api/closure/list?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null),
         fetch(`/api/dashboard/attempts?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null),
         fetch(`/api/supply?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null)
@@ -94,7 +93,6 @@ export default function AdminDashboard() {
     router.push('/');
   };
 
-  // Foolproof filtering: checks if the business date contains the selected month string
   const filteredClosures = closures.filter((c) => {
     const bDate = String(c.business_date || c.businessDate || c.date || '');
     if (!selectedMonth) return true;
@@ -284,7 +282,7 @@ export default function AdminDashboard() {
                       <td className="py-3">
                         {dayAttempts.length > 0 ? (
                           <span className="bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs font-bold border border-amber-200">
-                            ⚠️ Modifiée ({dayAttempts.length} essais)
+                            ⚠️ Modifiée ({dayAttempts.length} version(s))
                           </span>
                         ) : (
                           <span className="text-gray-500 text-xs">Standard</span>
@@ -412,7 +410,8 @@ export default function AdminDashboard() {
                     const code = i.raw_materials?.code || i.materialCode || '';
                     const fallbackLabels: Record<string, string> = {
                       'dinde': 'Dinde', 'vh': 'Viande Hachée', 'crispy': 'Crispy', 'mozarella': 'Mozzarella',
-                      'tortilla': 'Tortilla', 'burger': 'Pain Burger', 'soda': 'Soda', 'eau_p': 'Eau (P)', 'eau_g': 'Eau (G)'
+                      'tortilla': 'Tortilla', 'burger': 'Pain Burger', 'soda': 'Soda', 'eau_p': 'Eau (P)', 'eau_g': 'Eau (G)',
+                      'fruit_de_mer': 'Fruits de Mer'
                     };
                     const label = i.materialLabel || fallbackLabels[code] || code || 'Article';
 
