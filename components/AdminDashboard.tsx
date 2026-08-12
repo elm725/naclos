@@ -26,7 +26,7 @@ export default function AdminDashboard() {
     fetchData();
   }, [selectedMonth]);
 
- const fetchData = async () => {
+  const fetchData = async () => {
     setLoading(true);
     setFetchError(null);
     const timestamp = Date.now();
@@ -36,14 +36,13 @@ export default function AdminDashboard() {
         fetch(`/api/dashboard/attempts?month=${selectedMonth}&_t=${timestamp}`).catch(() => null),
         fetch(`/api/supply?month=${selectedMonth}&_t=${timestamp}`).catch(() => null)
       ]);
+
       const errors: string[] = [];
 
       if (closuresRes && closuresRes.ok) {
         const cData = await closuresRes.json();
         setClosures(cData.closures || cData || []);
       } else if (closuresRes) {
-        const text = await closuresRes.text().catch(() => '');
-        console.error('Closures fetch failed:', closuresRes.status, text);
         errors.push(`Clôtures (${closuresRes.status})`);
       } else {
         errors.push('Clôtures (réseau)');
@@ -53,8 +52,6 @@ export default function AdminDashboard() {
         const attData = await attemptsRes.json();
         setAttempts(attData.attempts || attData || []);
       } else if (attemptsRes) {
-        const text = await attemptsRes.text().catch(() => '');
-        console.error('Attempts fetch failed:', attemptsRes.status, text);
         errors.push(`Tentatives (${attemptsRes.status})`);
       } else {
         errors.push('Tentatives (réseau)');
@@ -64,8 +61,6 @@ export default function AdminDashboard() {
         const sData = await supplyRes.json();
         setSupplies(sData.supplies || sData || []);
       } else if (supplyRes) {
-        const text = await supplyRes.text().catch(() => '');
-        console.error('Supply fetch failed:', supplyRes.status, text);
         errors.push(`Achats (${supplyRes.status})`);
       } else {
         errors.push('Achats (réseau)');
@@ -87,12 +82,18 @@ export default function AdminDashboard() {
     router.push('/');
   };
 
+  // Foolproof filtering: checks if the business date contains the selected month string
   const filteredClosures = closures.filter((c) => {
-    const bDate = c.business_date || c.businessDate;
-    return bDate && bDate.startsWith(selectedMonth);
-  }).sort((a, b) => new Date(a.business_date || a.businessDate || 0).getTime() - new Date(b.business_date || b.businessDate || 0).getTime());
+    const bDate = String(c.business_date || c.businessDate || c.date || '');
+    if (!selectedMonth) return true;
+    return bDate.includes(selectedMonth);
+  }).sort((a, b) => {
+    const d1 = new Date(a.business_date || a.businessDate || a.date || 0).getTime();
+    const d2 = new Date(b.business_date || b.businessDate || b.date || 0).getTime();
+    return d1 - d2;
+  });
 
-  const totalRevenue = filteredClosures.reduce((sum, c) => sum + (Number(c.gross_revenue ?? c.grossRevenue) || 0), 0);
+  const totalRevenue = filteredClosures.reduce((sum, c) => sum + (Number(c.gross_revenue ?? c.grossRevenue ?? c.total_revenue ?? c.totalRevenue) || 0), 0);
   const totalExpenses = filteredClosures.reduce((sum, c) => sum + (Number(c.total_expenses ?? c.totalExpenses) || 0), 0);
   const totalNetCash = filteredClosures.reduce((sum, c) => sum + (Number(c.net_cash ?? c.netCash) || 0), 0);
 
@@ -101,22 +102,33 @@ export default function AdminDashboard() {
   const avgDailyExpenses = totalExpenses / daysCount;
   const expenseRatio = totalRevenue > 0 ? ((totalExpenses / totalRevenue) * 100).toFixed(1) : '0';
 
-  const maxDay = filteredClosures.reduce((max, c) => (Number(c.gross_revenue ?? c.grossRevenue) > Number((max?.gross_revenue ?? max?.grossRevenue) || 0) ? c : max), null);
-  const minDay = filteredClosures.reduce((min, c) => (Number(c.gross_revenue ?? c.grossRevenue) < Number((min?.gross_revenue ?? min?.grossRevenue) || Infinity) ? c : min), null);
+  const maxDay = filteredClosures.reduce((max, c) => {
+    const rev = Number(c.gross_revenue ?? c.grossRevenue ?? c.total_revenue ?? c.totalRevenue) || 0;
+    const maxRev = Number(max?.gross_revenue ?? max?.grossRevenue ?? max?.total_revenue ?? max?.totalRevenue) || 0;
+    return rev > maxRev ? c : max;
+  }, null);
+
+  const minDay = filteredClosures.reduce((min, c) => {
+    const rev = Number(c.gross_revenue ?? c.grossRevenue ?? c.total_revenue ?? c.totalRevenue) || 0;
+    const minRev = Number(min?.gross_revenue ?? min?.grossRevenue ?? min?.total_revenue ?? min?.totalRevenue) || Infinity;
+    return rev < minRev ? c : min;
+  }, null);
 
   const staffAdvancesMap: { [key: string]: number } = {};
   filteredClosures.forEach((c) => {
     const advances = c.staffAdvances || c.staff_advances || [];
     advances.forEach((adv: any) => {
       const name = adv.employee_name || adv.employeeName;
-      staffAdvancesMap[name] = (staffAdvancesMap[name] || 0) + (Number(adv.amount) || 0);
+      if (name) {
+        staffAdvancesMap[name] = (staffAdvancesMap[name] || 0) + (Number(adv.amount) || 0);
+      }
     });
   });
 
   const chartData = {
-    labels: filteredClosures.map((c) => c.business_date || c.businessDate),
+    labels: filteredClosures.map((c) => c.business_date || c.businessDate || c.date),
     datasets: [
-      { label: 'Recette Brute (MAD)', data: filteredClosures.map((c) => Number(c.gross_revenue ?? c.grossRevenue) || 0), borderColor: 'rgb(22, 163, 74)', backgroundColor: 'rgba(22, 163, 74, 0.1)', fill: true, tension: 0.2 },
+      { label: 'Recette Brute (MAD)', data: filteredClosures.map((c) => Number(c.gross_revenue ?? c.grossRevenue ?? c.total_revenue ?? c.totalRevenue) || 0), borderColor: 'rgb(22, 163, 74)', backgroundColor: 'rgba(22, 163, 74, 0.1)', fill: true, tension: 0.2 },
       { label: 'Dépenses (MAD)', data: filteredClosures.map((c) => Number(c.total_expenses ?? c.totalExpenses) || 0), borderColor: 'rgb(220, 38, 38)', backgroundColor: 'rgba(220, 38, 38, 0.1)', fill: true, tension: 0.2 },
     ],
   };
@@ -125,7 +137,9 @@ export default function AdminDashboard() {
   supplies.forEach(s => {
     (s.items || []).forEach((i: any) => {
       const itemName = i.label || i.code;
-      inventoryVolumes[itemName] = (inventoryVolumes[itemName] || 0) + (Number(i.quantity) || 0);
+      if (itemName) {
+        inventoryVolumes[itemName] = (inventoryVolumes[itemName] || 0) + (Number(i.quantity) || 0);
+      }
     });
   });
 
@@ -141,9 +155,9 @@ export default function AdminDashboard() {
     ]
   };
 
-  const selectedClosureDate = selectedClosure ? (selectedClosure.business_date || selectedClosure.businessDate) : null;
+  const selectedClosureDate = selectedClosure ? (selectedClosure.business_date || selectedClosure.businessDate || selectedClosure.date) : null;
   const selectedClosureAttempts = selectedClosureDate
-    ? attempts.filter(a => (a.closure_date || '').startsWith(selectedClosureDate))
+    ? attempts.filter(a => String(a.closure_date || '').includes(selectedClosureDate))
     : [];
 
   return (
@@ -193,8 +207,8 @@ export default function AdminDashboard() {
         <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-1">
           <span className="text-xs text-gray-400 font-bold uppercase">Extrêmes du Mois</span>
           <div className="text-xs font-bold text-gray-800 space-y-0.5">
-            <div>📈 Max: {maxDay ? `${Number(maxDay.gross_revenue ?? maxDay.grossRevenue).toLocaleString()} MAD` : '-'}</div>
-            <div>📉 Min: {minDay ? `${Number(minDay.gross_revenue ?? minDay.grossRevenue).toLocaleString()} MAD` : '-'}</div>
+            <div>📈 Max: {maxDay ? `${Number(maxDay.gross_revenue ?? maxDay.grossRevenue ?? maxDay.total_revenue ?? maxDay.totalRevenue).toLocaleString()} MAD` : '-'}</div>
+            <div>📉 Min: {minDay ? `${Number(minDay.gross_revenue ?? minDay.grossRevenue ?? minDay.total_revenue ?? minDay.totalRevenue).toLocaleString()} MAD` : '-'}</div>
           </div>
         </div>
       </div>
@@ -245,9 +259,11 @@ export default function AdminDashboard() {
               </thead>
               <tbody className="divide-y">
                 {filteredClosures.map((c) => {
-                  const bDate = c.business_date || c.businessDate;
-                  const dayAttempts = attempts.filter(a => (a.closure_date || '').startsWith(bDate));
+                  const bDate = c.business_date || c.businessDate || c.date;
+                  const dayAttempts = attempts.filter(a => String(a.closure_date || '').includes(bDate));
                   const realTime = new Date(c.submitted_at || c.created_at || new Date()).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+                  const grossRev = Number(c.gross_revenue ?? c.grossRevenue ?? c.total_revenue ?? c.totalRevenue) || 0;
+                  const netCsh = Number(c.net_cash ?? c.netCash) || 0;
 
                   return (
                     <tr key={c.id || bDate} className="hover:bg-gray-50">
@@ -262,8 +278,8 @@ export default function AdminDashboard() {
                           <span className="text-gray-500 text-xs">Standard</span>
                         )}
                       </td>
-                      <td className="py-3 text-right font-mono font-bold text-green-700">{Number(c.gross_revenue ?? c.grossRevenue).toLocaleString()} MAD</td>
-                      <td className="py-3 text-right font-mono font-bold">{Number(c.net_cash ?? c.netCash).toLocaleString()} MAD</td>
+                      <td className="py-3 text-right font-mono font-bold text-green-700">{grossRev.toLocaleString()} MAD</td>
+                      <td className="py-3 text-right font-mono font-bold">{netCsh.toLocaleString()} MAD</td>
                       <td className="py-3 text-center">
                         <button onClick={() => setSelectedClosure(c)} className="px-3 py-1.5 bg-gray-900 text-white text-xs font-bold rounded-lg hover:bg-gray-800">Voir Détails</button>
                       </td>
@@ -339,7 +355,7 @@ export default function AdminDashboard() {
             </div>
 
             <div className="grid grid-cols-3 gap-3 bg-gray-50 p-4 rounded-xl text-center font-mono">
-              <div><span className="text-[10px] text-gray-400 uppercase block">Recette</span><span className="text-base font-bold text-green-700">{Number(selectedClosure.gross_revenue ?? selectedClosure.grossRevenue).toLocaleString()} MAD</span></div>
+              <div><span className="text-[10px] text-gray-400 uppercase block">Recette</span><span className="text-base font-bold text-green-700">{Number(selectedClosure.gross_revenue ?? selectedClosure.grossRevenue ?? selectedClosure.total_revenue ?? selectedClosure.totalRevenue).toLocaleString()} MAD</span></div>
               <div><span className="text-[10px] text-gray-400 uppercase block">Dépenses</span><span className="text-base font-bold text-red-600">{Number(selectedClosure.total_expenses ?? selectedClosure.totalExpenses).toLocaleString()} MAD</span></div>
               <div><span className="text-[10px] text-gray-400 uppercase block">Cash Net</span><span className="text-base font-bold text-gray-900">{Number(selectedClosure.net_cash ?? selectedClosure.netCash).toLocaleString()} MAD</span></div>
             </div>
