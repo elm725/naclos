@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 const CORE_STOCK_ITEMS = [
@@ -13,8 +13,10 @@ const CORE_STOCK_ITEMS = [
   { code: 'soda', label: 'Soda', unit: 'unit' },
   { code: 'eau_p', label: 'Eau (Petite)', unit: 'unit' },
   { code: 'eau_g', label: 'Eau (Grande)', unit: 'unit' },
-  { code: 'fruit_de_mer', label: 'Fruits de Mer', unit: 'kg' },
+  { code: 'fruit_de_mer', label: 'Fruits de Mer', unit: 'kg' }
 ];
+
+const PREDEFINED_EXPENSES = ['Fournisseur', 'Frite', 'VH', 'Chikas', 'Salem', 'Autre...'];
 
 export default function DailyEntryForm() {
   const router = useRouter();
@@ -33,17 +35,16 @@ export default function DailyEntryForm() {
   const [receiptImageUrl, setReceiptImageUrl] = useState<string | null>(null);
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
 
-  // Expenses
-  const [expenses, setExpenses] = useState<{ label: string; amount: number | '' }[]>([
-    { label: '', amount: '' },
+  const [availableStaff, setAvailableStaff] = useState<string[]>([]);
+
+  const [expenses, setExpenses] = useState<{ category: string; customLabel: string; amount: number | '' }[]>([
+    { category: '', customLabel: '', amount: '' },
   ]);
 
-  // Staff Advances (Avances sur salaire)
-  const [staffAdvances, setStaffAdvances] = useState<{ employeeName: string; amount: number | '' }[]>([
-    { employeeName: '', amount: '' },
+  const [staffAdvances, setStaffAdvances] = useState<{ selection: string; customName: string; amount: number | '' }[]>([
+    { selection: '', customName: '', amount: '' },
   ]);
 
-  // Stock Counts
   const [stockCounts, setStockCounts] = useState<{ [key: string]: number | '' }>(
     Object.fromEntries(CORE_STOCK_ITEMS.map((item) => [item.code, '']))
   );
@@ -51,26 +52,58 @@ export default function DailyEntryForm() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  useEffect(() => {
+    const fetchStaffForMonth = async () => {
+      if (!businessDate) return;
+      
+      let monthStr = '';
+      if (businessDate.includes('-') && businessDate.indexOf('-') === 4) {
+        monthStr = businessDate.substring(0, 7);
+      } else {
+        const parts = businessDate.split(/[\/\-]/);
+        if (parts.length === 3) {
+          const year = parts[0].length === 4 ? parts[0] : parts[2];
+          const month = parts[0].length === 4 ? parts[1] : parts[0];
+          monthStr = `${year}-${month.padStart(2, '0')}`;
+        }
+      }
+
+      if (!monthStr || monthStr.length !== 7) return;
+
+      const timestamp = Date.now();
+      try {
+        const res = await fetch(`/api/dashboard/summary?month=${monthStr}&_t=${timestamp}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.salaries) {
+            setAvailableStaff(data.salaries.map((s: any) => s.name));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch staff list', err);
+      }
+    };
+    fetchStaffForMonth();
+  }, [businessDate]);
+
   const handleLogout = () => {
     sessionStorage.clear();
     router.push('/');
   };
 
-  // Expense Handlers
-  const addExpenseRow = () => setExpenses([...expenses, { label: '', amount: '' }]);
+  const addExpenseRow = () => setExpenses([...expenses, { category: '', customLabel: '', amount: '' }]);
   const removeExpenseRow = (index: number) => setExpenses(expenses.filter((_, i) => i !== index));
-  const updateExpense = (index: number, field: 'label' | 'amount', value: any) => {
+  const updateExpense = (index: number, field: 'category' | 'customLabel' | 'amount', value: any) => {
     const updated = [...expenses];
-    updated[index][field] = value;
+    updated[index][field] = value as never;
     setExpenses(updated);
   };
 
-  // Advance Handlers
-  const addAdvanceRow = () => setStaffAdvances([...staffAdvances, { employeeName: '', amount: '' }]);
+  const addAdvanceRow = () => setStaffAdvances([...staffAdvances, { selection: '', customName: '', amount: '' }]);
   const removeAdvanceRow = (index: number) => setStaffAdvances(staffAdvances.filter((_, i) => i !== index));
-  const updateAdvance = (index: number, field: 'employeeName' | 'amount', value: any) => {
+  const updateAdvance = (index: number, field: 'selection' | 'customName' | 'amount', value: any) => {
     const updated = [...staffAdvances];
-    updated[index][field] = value;
+    updated[index][field] = value as never;
     setStaffAdvances(updated);
   };
 
@@ -78,7 +111,6 @@ export default function DailyEntryForm() {
     setStockCounts({ ...stockCounts, [code]: value === '' ? '' : Number(value) });
   };
 
-  // Receipt Upload (MODIFIED TO SHOW REAL ERROR)
   const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -119,11 +151,17 @@ export default function DailyEntryForm() {
       receiptImageUrl,
       notes,
       expenses: expenses
-        .filter((exp) => exp.label.trim() !== '' && Number(exp.amount) > 0)
-        .map((exp) => ({ label: exp.label, amount: Number(exp.amount) })),
+        .map((exp) => ({
+          label: exp.category === 'Autre...' ? exp.customLabel : exp.category,
+          amount: Number(exp.amount),
+        }))
+        .filter((exp) => exp.label.trim() !== '' && exp.amount > 0),
       staffAdvances: staffAdvances
-        .filter((adv) => adv.employeeName.trim() !== '' && Number(adv.amount) > 0)
-        .map((adv) => ({ employeeName: adv.employeeName, amount: Number(adv.amount) })),
+        .map((adv) => ({
+          employeeName: adv.selection === 'Autre...' ? adv.customName : adv.selection,
+          amount: Number(adv.amount),
+        }))
+        .filter((adv) => adv.employeeName.trim() !== '' && adv.amount > 0),
       inventory: CORE_STOCK_ITEMS.map((item) => ({
         materialCode: item.code,
         materialLabel: item.label,
@@ -211,25 +249,43 @@ export default function DailyEntryForm() {
         </div>
 
         {expenses.map((exp, idx) => (
-          <div key={idx} className="flex gap-2 items-center">
-            <input
-              type="text"
-              placeholder="Nom de la dépense (ex: Achat Pain, Transport...)"
-              value={exp.label}
-              onChange={(e) => updateExpense(idx, 'label', e.target.value)}
-              className="flex-1 p-2.5 border rounded-lg text-sm outline-none"
-            />
-            <input
-              type="number"
-              min="0"
-              placeholder="Montant (MAD)"
-              value={exp.amount}
-              onChange={(e) => updateExpense(idx, 'amount', e.target.value === '' ? '' : Number(e.target.value))}
-              className="w-32 p-2.5 border rounded-lg text-sm font-mono outline-none"
-            />
-            {expenses.length > 1 && (
-              <button type="button" onClick={() => removeExpenseRow(idx)} className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg font-bold">✕</button>
-            )}
+          <div key={idx} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center bg-gray-50 p-2 rounded-lg border">
+            <div className="flex-1 w-full flex flex-col sm:flex-row gap-2">
+              <select
+                value={exp.category}
+                onChange={(e) => updateExpense(idx, 'category', e.target.value)}
+                className={`p-2.5 border rounded-lg text-sm outline-none bg-white ${exp.category === 'Autre...' ? 'sm:w-1/3' : 'w-full'}`}
+              >
+                <option value="" disabled>Sélectionnez une dépense...</option>
+                {PREDEFINED_EXPENSES.map(opt => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+              
+              {exp.category === 'Autre...' && (
+                <input
+                  type="text"
+                  placeholder="Précisez la dépense..."
+                  value={exp.customLabel}
+                  onChange={(e) => updateExpense(idx, 'customLabel', e.target.value)}
+                  className="flex-1 p-2.5 border rounded-lg text-sm outline-none"
+                />
+              )}
+            </div>
+            
+            <div className="flex w-full sm:w-auto gap-2">
+              <input
+                type="number"
+                min="0"
+                placeholder="Montant (MAD)"
+                value={exp.amount}
+                onChange={(e) => updateExpense(idx, 'amount', e.target.value === '' ? '' : Number(e.target.value))}
+                className="w-full sm:w-32 p-2.5 border rounded-lg text-sm font-mono outline-none"
+              />
+              {expenses.length > 1 && (
+                <button type="button" onClick={() => removeExpenseRow(idx)} className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg font-bold">✕</button>
+              )}
+            </div>
           </div>
         ))}
         <button type="button" onClick={addExpenseRow} className="text-xs font-bold text-blue-600 hover:underline">+ Ajouter une autre dépense</button>
@@ -243,25 +299,44 @@ export default function DailyEntryForm() {
         </div>
 
         {staffAdvances.map((adv, idx) => (
-          <div key={idx} className="flex gap-2 items-center">
-            <input
-              type="text"
-              placeholder="Nom de l'employé"
-              value={adv.employeeName}
-              onChange={(e) => updateAdvance(idx, 'employeeName', e.target.value)}
-              className="flex-1 p-2.5 border rounded-lg text-sm outline-none"
-            />
-            <input
-              type="number"
-              min="0"
-              placeholder="Montant (MAD)"
-              value={adv.amount}
-              onChange={(e) => updateAdvance(idx, 'amount', e.target.value === '' ? '' : Number(e.target.value))}
-              className="w-32 p-2.5 border rounded-lg text-sm font-mono outline-none"
-            />
-            {staffAdvances.length > 1 && (
-              <button type="button" onClick={() => removeAdvanceRow(idx)} className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg font-bold">✕</button>
-            )}
+          <div key={idx} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center bg-gray-50 p-2 rounded-lg border">
+            <div className="flex-1 w-full flex flex-col sm:flex-row gap-2">
+              <select
+                value={adv.selection}
+                onChange={(e) => updateAdvance(idx, 'selection', e.target.value)}
+                className={`p-2.5 border rounded-lg text-sm outline-none bg-white ${adv.selection === 'Autre...' ? 'sm:w-1/3' : 'w-full'}`}
+              >
+                <option value="" disabled>Sélectionnez l'employé...</option>
+                {availableStaff.map(staff => (
+                  <option key={staff} value={staff}>{staff}</option>
+                ))}
+                <option value="Autre...">Autre...</option>
+              </select>
+              
+              {adv.selection === 'Autre...' && (
+                <input
+                  type="text"
+                  placeholder="Nom de l'employé..."
+                  value={adv.customName}
+                  onChange={(e) => updateAdvance(idx, 'customName', e.target.value)}
+                  className="flex-1 p-2.5 border rounded-lg text-sm outline-none"
+                />
+              )}
+            </div>
+
+            <div className="flex w-full sm:w-auto gap-2">
+              <input
+                type="number"
+                min="0"
+                placeholder="Montant (MAD)"
+                value={adv.amount}
+                onChange={(e) => updateAdvance(idx, 'amount', e.target.value === '' ? '' : Number(e.target.value))}
+                className="w-full sm:w-32 p-2.5 border rounded-lg text-sm font-mono outline-none"
+              />
+              {staffAdvances.length > 1 && (
+                <button type="button" onClick={() => removeAdvanceRow(idx)} className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg font-bold">✕</button>
+              )}
+            </div>
           </div>
         ))}
         <button type="button" onClick={addAdvanceRow} className="text-xs font-bold text-blue-600 hover:underline">+ Ajouter une avance</button>

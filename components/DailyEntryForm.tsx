@@ -35,15 +35,12 @@ export default function DailyEntryForm() {
   const [receiptImageUrl, setReceiptImageUrl] = useState<string | null>(null);
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
 
-  // New states for dynamic dropdowns
   const [availableStaff, setAvailableStaff] = useState<string[]>([]);
 
-  // Expenses state updated to handle dropdown + custom text
   const [expenses, setExpenses] = useState<{ category: string; customLabel: string; amount: number | '' }[]>([
     { category: '', customLabel: '', amount: '' },
   ]);
 
-  // Staff Advances state updated to handle dropdown + custom text
   const [staffAdvances, setStaffAdvances] = useState<{ selection: string; customName: string; amount: number | '' }[]>([
     { selection: '', customName: '', amount: '' },
   ]);
@@ -55,14 +52,13 @@ export default function DailyEntryForm() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Fetch staff names dynamically based on the selected month (Robust version)
   useEffect(() => {
     const fetchStaffForMonth = async () => {
       if (!businessDate) return;
       
       let monthStr = '';
       if (businessDate.includes('-') && businessDate.indexOf('-') === 4) {
-        monthStr = businessDate.substring(0, 7); // Standard 'YYYY-MM'
+        monthStr = businessDate.substring(0, 7);
       } else {
         const parts = businessDate.split(/[\/\-]/);
         if (parts.length === 3) {
@@ -95,7 +91,6 @@ export default function DailyEntryForm() {
     router.push('/');
   };
 
-  // Expense Handlers
   const addExpenseRow = () => setExpenses([...expenses, { category: '', customLabel: '', amount: '' }]);
   const removeExpenseRow = (index: number) => setExpenses(expenses.filter((_, i) => i !== index));
   const updateExpense = (index: number, field: 'category' | 'customLabel' | 'amount', value: any) => {
@@ -104,7 +99,6 @@ export default function DailyEntryForm() {
     setExpenses(updated);
   };
 
-  // Advance Handlers
   const addAdvanceRow = () => setStaffAdvances([...staffAdvances, { selection: '', customName: '', amount: '' }]);
   const removeAdvanceRow = (index: number) => setStaffAdvances(staffAdvances.filter((_, i) => i !== index));
   const updateAdvance = (index: number, field: 'selection' | 'customName' | 'amount', value: any) => {
@@ -117,7 +111,6 @@ export default function DailyEntryForm() {
     setStockCounts({ ...stockCounts, [code]: value === '' ? '' : Number(value) });
   };
 
-  // Receipt Upload
   const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -132,10 +125,10 @@ export default function DailyEntryForm() {
       if (res.ok && data.url) {
         setReceiptImageUrl(data.url);
       } else {
-        alert('Erreur lors du téléchargement du reçu.');
+        alert(`ERREUR API: ${data.error || 'Erreur inconnue'}`);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      alert(`ERREUR CODE: ${err.message}`);
     } finally {
       setUploadingReceipt(false);
     }
