@@ -15,11 +15,11 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  return `${year}-${month}`;
-});
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+  });
   const [selectedClosure, setSelectedClosure] = useState<any | null>(null);
 
   useEffect(() => {
@@ -29,11 +29,12 @@ export default function AdminDashboard() {
   const fetchData = async () => {
     setLoading(true);
     setFetchError(null);
+    const timestamp = Date.now();
     try {
       const [closuresRes, attemptsRes, supplyRes] = await Promise.all([
-        fetch('/api/closure/list').catch(() => null),
-        fetch(`/api/dashboard/attempts?month=${selectedMonth}`).catch(() => null),
-        fetch(`/api/supply?month=${selectedMonth}`).catch(() => null)
+        fetch(`/api/closure/list?_t=${timestamp}`).catch(() => null),
+        fetch(`/api/dashboard/attempts?month=${selectedMonth}&_t=${timestamp}`).catch(() => null),
+        fetch(`/api/supply?month=${selectedMonth}&_t=${timestamp}`).catch(() => null)
       ]);
 
       const errors: string[] = [];
@@ -121,8 +122,6 @@ export default function AdminDashboard() {
     ],
   };
 
-  // NOTE: supplies are already scoped to `selectedMonth` server-side (see /api/supply GET),
-  // so we don't need to re-filter by date here — we just aggregate quantities by item.
   const inventoryVolumes: Record<string, number> = {};
   supplies.forEach(s => {
     (s.items || []).forEach((i: any) => {
@@ -160,6 +159,7 @@ export default function AdminDashboard() {
             <label className="text-xs font-bold text-gray-600">Mois :</label>
             <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="bg-transparent text-sm font-bold outline-none cursor-pointer" />
           </div>
+          <button onClick={fetchData} className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-500 transition">Rafraîchir</button>
           <button onClick={handleLogout} className="px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition">Déconnexion</button>
         </div>
       </div>
