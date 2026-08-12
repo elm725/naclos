@@ -362,110 +362,129 @@ export default function AdminDashboard() {
       </div>
 
       {/* ========================================= */}
-      {/* SECTION: MONTHLY SUMMARY & PAYROLL        */}
+      {/* REDESIGNED SECTION: MONTHLY SUMMARY & PAYROLL */}
       {/* ========================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8 border-t-2 border-gray-200 pt-8">
-        <div className="space-y-6">
-          
-          <div className="bg-white p-6 rounded-2xl shadow-sm border space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-bold text-gray-900">Calcul des Salaires</h3>
-              <button onClick={addStaff} className="text-xs bg-blue-50 text-blue-600 font-bold px-3 py-1.5 rounded-lg hover:bg-blue-100">+ Ajouter Personnel</button>
-            </div>
-            {staffSalaries.length === 0 && <p className="text-xs text-gray-400 italic">Ajoutez votre personnel pour calculer les salaires nets après déduction des avances.</p>}
-            
-            <div className="space-y-3">
-              {staffSalaries.map(staff => {
-                const adv = getStaffAdvance(staff.name);
-                const net = (Number(staff.baseSalary) || 0) - adv;
-                return (
-                  <div key={staff.id} className="p-3 bg-gray-50 rounded-xl border space-y-3">
-                    <div className="flex gap-2 items-center">
-                      <input type="text" placeholder="Nom complet" value={staff.name} onChange={e => updateStaff(staff.id, 'name', e.target.value)} className="flex-1 p-2 border rounded-lg text-sm font-bold outline-none" />
-                      <input type="number" placeholder="Salaire base" value={staff.baseSalary === 0 ? '' : staff.baseSalary} onChange={e => updateStaff(staff.id, 'baseSalary', e.target.value)} className="w-32 p-2 border rounded-lg text-sm font-bold outline-none" />
-                      <button onClick={() => removeStaff(staff.id)} className="text-red-500 font-bold p-2 hover:bg-red-50 rounded-lg">✕</button>
-                    </div>
-                    {staff.name && (
-                      <div className="flex justify-between items-center text-xs px-2 py-1 bg-white rounded border">
-                        <span className="text-gray-500">Avances: <span className="font-bold text-red-500">-{adv} MAD</span></span>
-                        <span className="font-bold text-gray-900">À payer: <span className={net < 0 ? 'text-red-600' : 'text-green-600'}>{net} MAD</span></span>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-2xl shadow-sm border space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-bold text-gray-900">Dépenses Fixes</h3>
-              <button onClick={addFixedExpense} className="text-xs bg-blue-50 text-blue-600 font-bold px-3 py-1.5 rounded-lg hover:bg-blue-100">+ Ajouter Charge</button>
-            </div>
-            {fixedExpenses.length === 0 && <p className="text-xs text-gray-400 italic">Ajoutez les charges fixes du mois (Loyer, etc.) pour le bilan final.</p>}
-            
-            <div className="space-y-2">
-              {fixedExpenses.map(exp => (
-                <div key={exp.id} className="flex gap-2 items-center">
-                  <input type="text" placeholder="Description de la charge" value={exp.label} onChange={e => updateFixedExpense(exp.id, 'label', e.target.value)} className="flex-1 p-2 border rounded-lg text-sm font-bold outline-none" />
-                  <input type="number" placeholder="Montant" value={exp.amount === 0 ? '' : exp.amount} onChange={e => updateFixedExpense(exp.id, 'amount', e.target.value)} className="w-32 p-2 border rounded-lg text-sm font-bold outline-none" />
-                  <button onClick={() => removeFixedExpense(exp.id)} className="text-red-500 font-bold p-2 hover:bg-red-50 rounded-lg">✕</button>
-                </div>
-              ))}
-            </div>
-          </div>
+      <div className="mt-12 border-t-2 border-gray-200 pt-10 space-y-8">
+        <div>
+          <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Clôture et Bilan Mensuel</h2>
+          <p className="text-sm text-gray-500">Gérez votre personnel, vos charges fixes et consultez la santé financière globale du mois.</p>
         </div>
 
-        <div className="bg-gray-900 p-8 rounded-3xl shadow-xl text-white flex flex-col justify-between">
-          <div className="space-y-6">
-            <h3 className="text-2xl font-bold text-blue-400 border-b border-gray-700 pb-4">Bilan Global Mensuel</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* Left Column: Calculators (Takes 7 cols) */}
+          <div className="lg:col-span-7 space-y-6">
             
-            <div className="flex justify-between items-center">
-              <span className="text-gray-400 text-sm">Recette Mensuelle (Brute)</span>
-              <span className="font-mono text-lg font-bold text-green-400">+{totalRevenue.toLocaleString()} MAD</span>
-            </div>
-            
-            <div className="space-y-2 pt-4 border-t border-gray-800">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-500">Achats & Dépenses Journalières</span>
-                <span className="font-mono font-bold text-red-400">-{totalExpenses.toLocaleString()} MAD</span>
+            {/* Staff Salary Calculator */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-base font-bold text-gray-900">Calcul des Salaires & Avances</h3>
+                <button onClick={addStaff} className="text-xs bg-blue-50 text-blue-600 font-bold px-3 py-2 rounded-xl hover:bg-blue-100 transition">+ Ajouter Personnel</button>
               </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-500">Masse Salariale (Base)</span>
-                <span className="font-mono font-bold text-red-400">-{totalBaseSalaries.toLocaleString()} MAD</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-500">Dépenses Fixes Mensuelles</span>
-                <span className="font-mono font-bold text-red-400">-{totalFixedExpenses.toLocaleString()} MAD</span>
+              {staffSalaries.length === 0 && <p className="text-xs text-gray-400 italic">Ajoutez votre personnel pour calculer les salaires nets après déduction des avances.</p>}
+              
+              <div className="space-y-3">
+                {staffSalaries.map(staff => {
+                  const adv = getStaffAdvance(staff.name);
+                  const net = (Number(staff.baseSalary) || 0) - adv;
+                  return (
+                    <div key={staff.id} className="p-4 bg-gray-50 rounded-xl border space-y-3">
+                      <div className="flex gap-3 items-center">
+                        <input type="text" placeholder="Nom complet" value={staff.name} onChange={e => updateStaff(staff.id, 'name', e.target.value)} className="flex-1 p-2.5 bg-white border rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-black" />
+                        <input type="number" placeholder="Salaire base (MAD)" value={staff.baseSalary === 0 ? '' : staff.baseSalary} onChange={e => updateStaff(staff.id, 'baseSalary', e.target.value)} className="w-36 p-2.5 bg-white border rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-black" />
+                        <button onClick={() => removeStaff(staff.id)} className="text-red-500 hover:bg-red-100 p-2.5 rounded-xl font-bold transition">✕</button>
+                      </div>
+                      {staff.name && (
+                        <div className="flex justify-between items-center text-xs px-3 py-2 bg-white rounded-xl border">
+                          <span className="text-gray-500">Avances prises: <span className="font-bold text-red-500">-{adv} MAD</span></span>
+                          <span className="font-bold text-gray-900">Reste à payer: <span className={net < 0 ? 'text-red-600 font-extrabold' : 'text-green-600 font-extrabold'}>{net} MAD</span></span>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
 
-            <div className="flex justify-between items-center pt-4 border-t border-gray-800">
-              <span className="text-gray-400 text-sm">Total des Charges Globales</span>
-              <span className="font-mono text-lg font-bold text-red-500">-{totalOverallExpenses.toLocaleString()} MAD</span>
+            {/* Fixed Expenses Tracker */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-base font-bold text-gray-900">Dépenses Fixes (Loyer, Électricité...)</h3>
+                <button onClick={addFixedExpense} className="text-xs bg-blue-50 text-blue-600 font-bold px-3 py-2 rounded-xl hover:bg-blue-100 transition">+ Ajouter Charge</button>
+              </div>
+              {fixedExpenses.length === 0 && <p className="text-xs text-gray-400 italic">Ajoutez les charges fixes du mois pour le bilan final.</p>}
+              
+              <div className="space-y-3">
+                {fixedExpenses.map(exp => (
+                  <div key={exp.id} className="flex gap-3 items-center">
+                    <input type="text" placeholder="Description de la charge" value={exp.label} onChange={e => updateFixedExpense(exp.id, 'label', e.target.value)} className="flex-1 p-2.5 bg-white border rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-black" />
+                    <input type="number" placeholder="Montant (MAD)" value={exp.amount === 0 ? '' : exp.amount} onChange={e => updateFixedExpense(exp.id, 'amount', e.target.value)} className="w-36 p-2.5 bg-white border rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-black" />
+                    <button onClick={() => removeFixedExpense(exp.id)} className="text-red-500 hover:bg-red-100 p-2.5 rounded-xl font-bold transition">✕</button>
+                  </div>
+                ))}
+              </div>
             </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-gray-400 text-sm">Ratio Global Dépenses / Recette</span>
-              <span className="font-mono font-bold text-yellow-400">{monthlyExpenseRatio}%</span>
+
+          </div>
+
+          {/* Right Column: Premium Global Summary Card (Takes 5 cols) */}
+          <div className="lg:col-span-5 bg-gradient-to-br from-slate-950 via-gray-900 to-slate-900 p-8 rounded-3xl shadow-2xl text-white border border-gray-800 flex flex-col justify-between space-y-8">
+            <div className="space-y-6">
+              <div className="flex justify-between items-center border-b border-gray-800 pb-4">
+                <h3 className="text-xl font-extrabold text-blue-400 tracking-wide">Bilan Global Mensuel</h3>
+                <span className="text-xs font-mono bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20">{selectedMonth}</span>
+              </div>
+              
+              <div className="flex justify-between items-center bg-white/5 p-3.5 rounded-2xl border border-white/5">
+                <span className="text-gray-300 text-sm font-medium">Recette Mensuelle (Brute)</span>
+                <span className="font-mono text-base font-bold text-emerald-400">+{totalRevenue.toLocaleString()} MAD</span>
+              </div>
+              
+              <div className="space-y-3 pt-2">
+                <div className="flex justify-between items-center text-sm px-1">
+                  <span className="text-gray-400">Achats & Dépenses Journalières</span>
+                  <span className="font-mono font-semibold text-rose-400">-{totalExpenses.toLocaleString()} MAD</span>
+                </div>
+                <div className="flex justify-between items-center text-sm px-1">
+                  <span className="text-gray-400">Masse Salariale (Base)</span>
+                  <span className="font-mono font-semibold text-rose-400">-{totalBaseSalaries.toLocaleString()} MAD</span>
+                </div>
+                <div className="flex justify-between items-center text-sm px-1">
+                  <span className="text-gray-400">Dépenses Fixes Mensuelles</span>
+                  <span className="font-mono font-semibold text-rose-400">-{totalFixedExpenses.toLocaleString()} MAD</span>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-4 border-t border-gray-800 px-1">
+                <span className="text-gray-300 text-sm font-bold">Total des Charges Globales</span>
+                <span className="font-mono text-base font-extrabold text-rose-500">-{totalOverallExpenses.toLocaleString()} MAD</span>
+              </div>
+              
+              <div className="flex justify-between items-center bg-black/40 p-3.5 rounded-2xl border border-white/5">
+                <span className="text-gray-400 text-sm">Ratio Global Dépenses / Recette</span>
+                <span className="font-mono font-bold text-amber-400 text-base">{monthlyExpenseRatio}%</span>
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-gray-800">
+              <div className="bg-black/60 p-6 rounded-2xl border border-blue-500/30 text-center shadow-inner relative overflow-hidden">
+                <div className="absolute inset-0 bg-blue-500/5 pointer-events-none"></div>
+                <span className="block text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Bénéfice Net Mensuel Réel</span>
+                <span className={`text-4xl font-black font-mono tracking-tight ${monthlyNetProfit >= 0 ? 'text-emerald-400' : 'text-rose-500'}`}>
+                  {monthlyNetProfit > 0 ? '+' : ''}{monthlyNetProfit.toLocaleString()} MAD
+                </span>
+              </div>
+
+              <button 
+                onClick={saveMonthlySummary}
+                disabled={isSavingSummary}
+                className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 transition text-white font-bold rounded-2xl shadow-xl shadow-blue-600/20 disabled:opacity-50 text-sm tracking-wide"
+              >
+                {isSavingSummary ? 'Sauvegarde en cours...' : '💾 Sauvegarder le Bilan Mensuel'}
+              </button>
             </div>
           </div>
 
-          <div className="mt-8 space-y-4">
-            <div className="bg-black/30 p-6 rounded-2xl border border-gray-700 text-center">
-              <span className="block text-gray-400 text-xs font-bold uppercase mb-1">Bénéfice Net Mensuel Réel</span>
-              <span className={`text-4xl font-extrabold font-mono ${monthlyNetProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {monthlyNetProfit > 0 ? '+' : ''}{monthlyNetProfit.toLocaleString()} MAD
-              </span>
-            </div>
-            <button 
-              onClick={saveMonthlySummary}
-              disabled={isSavingSummary}
-              className="w-full py-4 bg-blue-600 hover:bg-blue-500 transition text-white font-bold rounded-xl shadow-lg disabled:opacity-50"
-            >
-              {isSavingSummary ? 'Sauvegarde en cours...' : '💾 Sauvegarder le Bilan Mensuel'}
-            </button>
-          </div>
         </div>
       </div>
       {/* ========================================= */}
