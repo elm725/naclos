@@ -31,12 +31,12 @@ export default function AdminDashboard() {
     setFetchError(null);
     const timestamp = Date.now();
     try {
+      const timestamp = Date.now();
       const [closuresRes, attemptsRes, supplyRes] = await Promise.all([
-        fetch(`/api/closure/list?month=${selectedMonth}&_t=${timestamp}`).catch(() => null),
+        fetch(`/api/closure/list?_t=${timestamp}`).catch(() => null),
         fetch(`/api/dashboard/attempts?month=${selectedMonth}&_t=${timestamp}`).catch(() => null),
         fetch(`/api/supply?month=${selectedMonth}&_t=${timestamp}`).catch(() => null)
       ]);
-
       const errors: string[] = [];
 
       if (closuresRes && closuresRes.ok) {

@@ -5,33 +5,13 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const month = searchParams.get('month');
-
     const supabase = getSupabaseAdminClient();
-    let query = supabase
+    
+    // Fetch all closures without restrictive month filters so nothing gets hidden
+    const { data: closures, error } = await supabase
       .from('daily_closures')
       .select('*')
       .order('business_date', { ascending: false });
-
-    if (month) {
-      const [yearStr, monthStrNum] = month.split('-');
-      const year = parseInt(yearStr, 10);
-      const m = parseInt(monthStrNum, 10);
-      const startDate = `${year}-${String(m).padStart(2, '0')}-01`;
-      
-      let nextYear = year;
-      let nextMonth = m + 1;
-      if (nextMonth > 12) {
-        nextMonth = 1;
-        nextYear += 1;
-      }
-      const endDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
-
-      query = query.gte('business_date', startDate).lt('business_date', endDate);
-    }
-
-    const { data: closures, error } = await query;
 
     if (error) {
       console.error('Error listing closures:', error);
