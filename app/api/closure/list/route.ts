@@ -15,8 +15,20 @@ export async function GET(request: NextRequest) {
       .order('business_date', { ascending: false });
 
     if (month) {
-      // Uses safe prefix matching to catch all entries for the month regardless of timestamps/timezones
-      query = query.ilike('business_date', `${month}%`);
+      const [yearStr, monthStrNum] = month.split('-');
+      const year = parseInt(yearStr, 10);
+      const m = parseInt(monthStrNum, 10);
+      const startDate = `${year}-${String(m).padStart(2, '0')}-01`;
+      
+      let nextYear = year;
+      let nextMonth = m + 1;
+      if (nextMonth > 12) {
+        nextMonth = 1;
+        nextYear += 1;
+      }
+      const endDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+
+      query = query.gte('business_date', startDate).lt('business_date', endDate);
     }
 
     const { data: closures, error } = await query;
