@@ -1,32 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/supabaseClient';
-import { monthRange } from '@/lib/Daterange';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const month = searchParams.get('month');
-
     const supabase = getSupabaseAdminClient();
-    let query = supabase.from('supply_purchases').select('*').order('business_date', { ascending: false });
+    
+    const { data, error } = await supabase
+      .from('supply_purchases')
+      .select('*')
+      .order('business_date', { ascending: false });
 
-    if (month) {
-      const { start, end } = monthRange(month);
-      query = query.gte('business_date', start).lt('business_date', end);
-    }
+    if (error) throw error;
 
-    const { data, error } = await query;
-    if (error) {
-      console.error('Error fetching supplies:', error);
-      return NextResponse.json({ supplies: [], error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ supplies: data || [] });
+    return NextResponse.json({ supplies: data || [] }, {
+      headers: { 
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
   } catch (err: any) {
     console.error('Supply GET Error:', err);
-    return NextResponse.json({ supplies: [], error: err.message }, { status: 500 });
+    return NextResponse.json({ supplies: [] });
   }
 }
 

@@ -1,37 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/supabaseClient';
-import { monthRange } from '@/lib/Daterange';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const month = searchParams.get('month');
-
     const supabase = getSupabaseAdminClient();
-    let query = supabase.from('closure_submission_attempts').select('*').order('attempted_at', { ascending: false });
+    
+    const { data, error } = await supabase
+      .from('closure_submission_attempts')
+      .select('*')
+      .order('attempted_at', { ascending: false });
 
-    if (month) {
-      const { start, end } = monthRange(month);
-      query = query.gte('closure_date', start).lt('closure_date', end);
-    }
-
-    const { data, error } = await query;
-    if (error) {
-      console.error('Error fetching attempts:', error);
-      return NextResponse.json({ attempts: [], error: error.message }, { status: 500 });
-    }
+    if (error) throw error;
 
     return NextResponse.json({ attempts: data || [] }, {
-      headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      headers: { 
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
         'Pragma': 'no-cache',
-        'Expires': '0',
-      },
+        'Expires': '0'
+      }
     });
   } catch (err: any) {
     console.error('Attempts API Error:', err);
-    return NextResponse.json({ attempts: [], error: err.message }, { status: 500 });
+    return NextResponse.json({ attempts: [] });
   }
 }
