@@ -26,17 +26,16 @@ export default function AdminDashboard() {
     fetchData();
   }, [selectedMonth]);
 
-  const fetchData = async () => {
+ const fetchData = async () => {
     setLoading(true);
     setFetchError(null);
     const timestamp = Date.now();
     try {
       const [closuresRes, attemptsRes, supplyRes] = await Promise.all([
-        fetch(`/api/closure/list?_t=${timestamp}`).catch(() => null),
+        fetch(`/api/closure/list?month=${selectedMonth}&_t=${timestamp}`).catch(() => null),
         fetch(`/api/dashboard/attempts?month=${selectedMonth}&_t=${timestamp}`).catch(() => null),
         fetch(`/api/supply?month=${selectedMonth}&_t=${timestamp}`).catch(() => null)
       ]);
-
       const errors: string[] = [];
 
       if (closuresRes && closuresRes.ok) {
