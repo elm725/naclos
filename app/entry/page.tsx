@@ -18,11 +18,26 @@ const CORE_STOCK_ITEMS = [
 
 const PREDEFINED_EXPENSES = ['Fournisseur', 'Frite', 'VH', 'Chikas', 'Salem', 'Autre...'];
 
+const STORAGE_KEY = 'naclos_tayeb_form_draft_v1';
+
 export default function DailyEntryForm() {
   const router = useRouter();
   const managerName = 'Tayeb';
 
+  // SECURITY GUARD
+  useEffect(() => {
+    const authRole = sessionStorage.getItem('naclos_role');
+    const isAuth = sessionStorage.getItem('naclos_authenticated');
+    if (isAuth !== 'true' || (authRole !== 'tayeb' && authRole !== 'admin')) {
+      router.push('/');
+    }
+  }, [router]);
+
   const [businessDate, setBusinessDate] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(`${STORAGE_KEY}_date`);
+      if (saved) return saved;
+    }
     const d = new Date();
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -30,27 +45,65 @@ export default function DailyEntryForm() {
     return `${year}-${month}-${day}`;
   });
 
-  const [grossRevenue, setGrossRevenue] = useState<number | ''>('');
-  const [notes, setNotes] = useState('');
-  const [receiptImageUrl, setReceiptImageUrl] = useState<string | null>(null);
+  const [grossRevenue, setGrossRevenue] = useState<number | ''>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(`${STORAGE_KEY}_rev`);
+      if (saved !== null && saved !== '') return Number(saved);
+    }
+    return '';
+  });
+
+  const [notes, setNotes] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem(`${STORAGE_KEY}_notes`) || '';
+    return '';
+  });
+
+  const [receiptImageUrl, setReceiptImageUrl] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem(`${STORAGE_KEY}_receipt`);
+    return null;
+  });
+
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
 
   const [availableStaff, setAvailableStaff] = useState<string[]>([]);
 
-  const [expenses, setExpenses] = useState<{ category: string; customLabel: string; amount: number | '' }[]>([
-    { category: '', customLabel: '', amount: '' },
-  ]);
+  const [expenses, setExpenses] = useState<{ category: string; customLabel: string; amount: number | '' }[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(`${STORAGE_KEY}_expenses`);
+      if (saved) return JSON.parse(saved);
+    }
+    return [{ category: '', customLabel: '', amount: '' }];
+  });
 
-  const [staffAdvances, setStaffAdvances] = useState<{ selection: string; customName: string; amount: number | '' }[]>([
-    { selection: '', customName: '', amount: '' },
-  ]);
+  const [staffAdvances, setStaffAdvances] = useState<{ selection: string; customName: string; amount: number | '' }[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(`${STORAGE_KEY}_advances`);
+      if (saved) return JSON.parse(saved);
+    }
+    return [{ selection: '', customName: '', amount: '' }];
+  });
 
-  const [stockCounts, setStockCounts] = useState<{ [key: string]: number | '' }>(
-    Object.fromEntries(CORE_STOCK_ITEMS.map((item) => [item.code, '']))
-  );
+  const [stockCounts, setStockCounts] = useState<{ [key: string]: number | '' }>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(`${STORAGE_KEY}_stock`);
+      if (saved) return JSON.parse(saved);
+    }
+    return Object.fromEntries(CORE_STOCK_ITEMS.map((item) => [item.code, '']));
+  });
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // AUTO-SAVE DRAFT
+  useEffect(() => {
+    localStorage.setItem(`${STORAGE_KEY}_date`, businessDate);
+    localStorage.setItem(`${STORAGE_KEY}_rev`, String(grossRevenue));
+    localStorage.setItem(`${STORAGE_KEY}_notes`, notes);
+    if (receiptImageUrl) localStorage.setItem(`${STORAGE_KEY}_receipt`, receiptImageUrl);
+    localStorage.setItem(`${STORAGE_KEY}_expenses`, JSON.stringify(expenses));
+    localStorage.setItem(`${STORAGE_KEY}_advances`, JSON.stringify(staffAdvances));
+    localStorage.setItem(`${STORAGE_KEY}_stock`, JSON.stringify(stockCounts));
+  }, [businessDate, grossRevenue, notes, receiptImageUrl, expenses, staffAdvances, stockCounts]);
 
   useEffect(() => {
     const fetchStaffForMonth = async () => {
@@ -88,6 +141,13 @@ export default function DailyEntryForm() {
 
   const handleLogout = () => {
     sessionStorage.clear();
+    localStorage.removeItem(STORAGE_KEY + '_date');
+    localStorage.removeItem(STORAGE_KEY + '_rev');
+    localStorage.removeItem(STORAGE_KEY + '_notes');
+    localStorage.removeItem(STORAGE_KEY + '_receipt');
+    localStorage.removeItem(STORAGE_KEY + '_expenses');
+    localStorage.removeItem(STORAGE_KEY + '_advances');
+    localStorage.removeItem(STORAGE_KEY + '_stock');
     router.push('/');
   };
 
@@ -180,6 +240,15 @@ export default function DailyEntryForm() {
       if (!res.ok) throw new Error(data.error || 'Erreur lors de la soumission.');
 
       setMessage({ type: 'success', text: 'Saisie du jour enregistrée avec succès!' });
+      
+      // CLEAR DRAFT ON SUCCESS
+      localStorage.removeItem(STORAGE_KEY + '_date');
+      localStorage.removeItem(STORAGE_KEY + '_rev');
+      localStorage.removeItem(STORAGE_KEY + '_notes');
+      localStorage.removeItem(STORAGE_KEY + '_receipt');
+      localStorage.removeItem(STORAGE_KEY + '_expenses');
+      localStorage.removeItem(STORAGE_KEY + '_advances');
+      localStorage.removeItem(STORAGE_KEY + '_stock');
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message });
     } finally {

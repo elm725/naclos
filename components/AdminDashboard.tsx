@@ -9,6 +9,16 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarEleme
 
 export default function AdminDashboardPage() {
   const router = useRouter();
+
+  // SECURITY GUARD
+  useEffect(() => {
+    const authRole = sessionStorage.getItem('naclos_role');
+    const isAuth = sessionStorage.getItem('naclos_authenticated');
+    if (isAuth !== 'true' || authRole !== 'admin') {
+      router.push('/');
+    }
+  }, [router]);
+
   const [closures, setClosures] = useState<any[]>([]);
   const [attempts, setAttempts] = useState<any[]>([]);
   const [supplies, setSupplies] = useState<any[]>([]);
@@ -24,7 +34,6 @@ export default function AdminDashboardPage() {
   
   const [selectedClosure, setSelectedClosure] = useState<any | null>(null);
 
-  // --- MONTHLY SUMMARY STATE ---
   const [fixedExpenses, setFixedExpenses] = useState<{id: string | number, label: string, amount: number}[]>([]);
   const [staffSalaries, setStaffSalaries] = useState<{id: string | number, name: string, baseSalary: number}[]>([]);
   const [isSavingSummary, setIsSavingSummary] = useState(false);
