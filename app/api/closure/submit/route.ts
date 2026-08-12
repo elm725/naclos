@@ -59,17 +59,6 @@ export async function POST(request: NextRequest) {
 
   const supabase = getSupabaseAdminClient();
 
-  try {
-    const { error: attemptError } = await supabase.from('closure_submission_attempts').insert({
-      closure_date: payload.businessDate,
-      submitted_by: payload.managerName,
-      attempted_data: rawJson,
-    });
-    if (attemptError) console.error('Failed to log submission attempt:', attemptError);
-  } catch (err) {
-    console.error('Attempt logging threw:', err);
-  }
-
   let existing: { id: string } | null = null;
   try {
     const { data, error } = await supabase
@@ -85,7 +74,45 @@ export async function POST(request: NextRequest) {
     }
     existing = data;
 
+    // --- INTERCEPT AND BACKUP EXISTING DATA BEFORE OVERWRITE ---
     if (existing) {
+      // 1. Fetch the complete old record before we destroy it
+      const { data: fullOldClosure } = await supabase
+        .from('daily_closures')
+        .select('*')
+        .eq('id', existing.id)
+        .single();
+
+      if (fullOldClosure) {
+        const [oldExp, oldAdv, oldInv] = await Promise.all([
+          supabase.from('expenses').select('*').eq('closure_id', existing.id),
+          supabase.from('staff_advances').select('*').eq('closure_id', existing.id),
+          supabase.from('inventory_logs').select('*, raw_materials(code, label_fr)').eq('closure_id', existing.id)
+        ]);
+
+        // 2. Format it so the frontend dashboard modal can read it perfectly
+        const oldDataSnapshot = {
+          ...fullOldClosure,
+          grossRevenue: fullOldClosure.gross_revenue, 
+          expenses: oldExp.data || [],
+          staffAdvances: oldAdv.data || [],
+          inventory_logs: oldInv.data || [],
+          notes: fullOldClosure.discrepancy_summary || ''
+        };
+
+        // 3. Save the backup into the attempts table
+        const { error: backupError } = await supabase.from('closure_submission_attempts').insert({
+          closure_date: payload.businessDate,
+          submitted_by: fullOldClosure.manager_name || payload.managerName,
+          attempted_data: oldDataSnapshot,
+        });
+
+        if (backupError) {
+          console.error('Failed to backup old closure data:', backupError);
+        }
+      }
+
+      // --- PROCEED WITH STANDARD CLEANUP ---
       const cleanupResults = await Promise.all([
         supabase.from('expenses').delete().eq('closure_id', existing.id),
         supabase.from('staff_advances').delete().eq('closure_id', existing.id),
