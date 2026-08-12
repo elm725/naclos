@@ -1,18 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdminClient, getSupabaseProjectRef } from '@/lib/supabaseClient';
+import { getSupabaseAdminClient } from '@/lib/supabaseClient';
 
+// 1. Force Vercel to disable all caching layers for this route
 export const dynamic = 'force-dynamic';
-
-const noStoreHeaders = {
-  'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
-  'CDN-Cache-Control': 'no-store',
-  'Vercel-CDN-Cache-Control': 'no-store',
-  Pragma: 'no-cache',
-  Expires: '0',
-};
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
 
 export async function GET(request: NextRequest) {
   try {
+    // 2. Explicitly read the search parameter so Vercel knows this is a dynamic request
+    const _t = request.nextUrl.searchParams.get('_t');
+
     const supabase = getSupabaseAdminClient();
     
     const { data: closures, error: closuresError } = await supabase
@@ -39,21 +37,15 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    return NextResponse.json(
-      {
-        closures: closuresWithDetails,
-        meta: {
-          projectRef: getSupabaseProjectRef(),
-          rowCount: closuresWithDetails.length,
-          businessDates: closuresWithDetails.map((closure) => closure.business_date),
-          queriedAt: new Date().toISOString(),
-          vercelGitCommitSha: process.env.VERCEL_GIT_COMMIT_SHA || null,
-          vercelEnvironment: process.env.VERCEL_ENV || null,
-        },
-      },
-      { headers: noStoreHeaders }
-    );
+    // 3. Send bulletproof cache-busting headers back to the client
+    return NextResponse.json({ closures: closuresWithDetails }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
+    });
   } catch (err: any) {
-    return NextResponse.json({ closures: [], error: err.message }, { status: 500, headers: noStoreHeaders });
+    return NextResponse.json({ closures: [], error: err.message }, { status: 500 });
   }
 }
