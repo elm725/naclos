@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/supabaseClient';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
 
 const noStoreHeaders = {
   'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
@@ -13,6 +15,10 @@ const noStoreHeaders = {
 
 export async function GET(request: NextRequest) {
   try {
+    // 🚨 THIS IS THE FIX: Actively reading the URL forces Vercel to bypass the static cache
+    const url = new URL(request.url);
+    const timestamp = url.searchParams.get('_t'); 
+    
     const supabase = getSupabaseAdminClient();
     
     const { data, error } = await supabase

@@ -282,7 +282,7 @@ export default function AdminDashboard() {
                       <td className="py-3 font-bold">{bDate}</td>
                       <td className="py-3 text-xs text-blue-600 font-mono">{realTime}</td>
                       <td className="py-3">
-                        {dayAttempts.length > 1 ? (
+                        {dayAttempts.length > 0 ? (
                           <span className="bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs font-bold border border-amber-200">
                             ⚠️ Modifiée ({dayAttempts.length} essais)
                           </span>
