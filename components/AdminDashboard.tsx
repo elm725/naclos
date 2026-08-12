@@ -7,7 +7,7 @@ import { Line, Bar } from 'react-chartjs-2';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
 
-export default function AdminDashboard() {
+export default function AdminDashboardPage() {
   const router = useRouter();
   const [closures, setClosures] = useState<any[]>([]);
   const [attempts, setAttempts] = useState<any[]>([]);
@@ -36,7 +36,6 @@ export default function AdminDashboard() {
   const addStaff = () => setStaffSalaries([...staffSalaries, { id: Date.now(), name: '', baseSalary: 0 }]);
   const updateStaff = (id: string | number, field: string, val: any) => setStaffSalaries(staffSalaries.map(s => s.id === id ? { ...s, [field]: val } : s));
   const removeStaff = (id: string | number) => setStaffSalaries(staffSalaries.filter(s => s.id !== id));
-  // -------------------------------------
 
   useEffect(() => {
     fetchData();
@@ -68,22 +67,18 @@ export default function AdminDashboard() {
       if (closuresRes && closuresRes.ok) {
         const cData = await closuresRes.json();
         setClosures(cData.closures || cData || []);
-      } else if (closuresRes) errors.push(`Clôtures (${closuresRes.status})`);
-      else errors.push('Clôtures (réseau)');
+      } else errors.push('Clôtures');
 
       if (attemptsRes && attemptsRes.ok) {
         const attData = await attemptsRes.json();
         setAttempts(attData.attempts || attData || []);
-      } else if (attemptsRes) errors.push(`Tentatives (${attemptsRes.status})`);
-      else errors.push('Tentatives (réseau)');
+      } else errors.push('Tentatives');
 
       if (supplyRes && supplyRes.ok) {
         const sData = await supplyRes.json();
         setSupplies(sData.supplies || sData || []);
-      } else if (supplyRes) errors.push(`Achats (${supplyRes.status})`);
-      else errors.push('Achats (réseau)');
+      } else errors.push('Achats');
 
-      // Fetch the saved monthly summary configurations
       if (summaryRes && summaryRes.ok) {
         const sumData = await summaryRes.json();
         setFixedExpenses(sumData.expenses.map((e: any) => ({ id: e.id, label: e.label, amount: e.amount })));
@@ -95,7 +90,6 @@ export default function AdminDashboard() {
 
       if (errors.length > 0) setFetchError(`Échec de récupération : ${errors.join(', ')}`);
     } catch (err) {
-      console.error('Error fetching data:', err);
       setFetchError('Erreur inattendue lors de la récupération des données.');
     } finally {
       setLoading(false);
@@ -117,7 +111,6 @@ export default function AdminDashboard() {
       if (!res.ok) throw new Error('Échec de la sauvegarde');
       alert('Bilan mensuel sauvegardé avec succès !');
     } catch (err) {
-      console.error(err);
       alert('Erreur lors de la sauvegarde du bilan.');
     } finally {
       setIsSavingSummary(false);
@@ -196,7 +189,6 @@ export default function AdminDashboard() {
     ]
   };
 
-  // --- MONTHLY SUMMARY MATH ---
   const getStaffAdvance = (name: string) => {
     if (!name) return 0;
     const searchName = name.toLowerCase().trim();
