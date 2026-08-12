@@ -194,7 +194,6 @@ export default function AdminDashboardPage() {
     ],
   };
 
-  // Only use filteredSupplies for the inventory calculation
   const inventoryVolumes: Record<string, number> = {};
   filteredSupplies.forEach(s => {
     (s.items || s.supply_items || []).forEach((i: any) => {
@@ -309,17 +308,17 @@ export default function AdminDashboardPage() {
             <p className="text-sm text-gray-400 text-center py-12">Aucun achat enregistré ce mois par Salem.</p>
           )}
 
-          {/* DETAILED DAILY PURCHASES TABLE */}
+          {/* DETAILED DAILY PURCHASES TABLE (SCROLLABLE) */}
           <div className="border-t pt-6 space-y-4">
             <h4 className="text-base font-bold text-gray-800">Détails Journaliers des Achats ({filteredSupplies.length})</h4>
             {filteredSupplies.length > 0 ? (
-              <div className="overflow-x-auto">
+              <div className="overflow-auto max-h-[280px] relative rounded-b-xl border border-gray-100">
                 <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b text-xs text-gray-400 uppercase">
-                      <th className="pb-3">Date d'Achat</th>
-                      <th className="pb-3">Acheteur</th>
-                      <th className="pb-3">Articles & Quantités Achetées</th>
+                  <thead className="sticky top-0 bg-white z-10 shadow-sm outline outline-1 outline-gray-200">
+                    <tr className="text-xs text-gray-400 uppercase">
+                      <th className="py-3 px-2 bg-white">Date d'Achat</th>
+                      <th className="py-3 px-2 bg-white">Acheteur</th>
+                      <th className="py-3 px-2 bg-white">Articles & Quantités Achetées</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -330,9 +329,9 @@ export default function AdminDashboardPage() {
 
                       return (
                         <tr key={s.id || idx} className="hover:bg-gray-50">
-                          <td className="py-3 font-bold">{sDate}</td>
-                          <td className="py-3 font-semibold text-gray-600">{buyer}</td>
-                          <td className="py-3">
+                          <td className="py-3 px-2 font-bold">{sDate}</td>
+                          <td className="py-3 px-2 font-semibold text-gray-600">{buyer}</td>
+                          <td className="py-3 px-2">
                             <div className="flex flex-wrap gap-2">
                               {itemsList.map((item: any, i: number) => (
                                 <span key={i} className="bg-blue-50 text-blue-800 text-xs px-2.5 py-1 rounded-lg border border-blue-100 font-bold">
@@ -357,16 +356,17 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border space-y-4">
           <h3 className="text-lg font-bold text-gray-900">Clôtures Journalières ({filteredClosures.length})</h3>
-          <div className="overflow-x-auto">
+          {/* CLOSURES TABLE (SCROLLABLE) */}
+          <div className="overflow-auto max-h-[280px] relative rounded-b-xl border border-gray-100">
             <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b text-xs text-gray-400 uppercase">
-                  <th className="pb-3">Date Prévue</th>
-                  <th className="pb-3">Heure d'envoi</th>
-                  <th className="pb-3">Statut</th>
-                  <th className="pb-3 text-right">Recette Brute</th>
-                  <th className="pb-3 text-right">Cash Net</th>
-                  <th className="pb-3 text-center">Action</th>
+              <thead className="sticky top-0 bg-white z-10 shadow-sm outline outline-1 outline-gray-200">
+                <tr className="text-xs text-gray-400 uppercase">
+                  <th className="py-3 px-2 bg-white">Date Prévue</th>
+                  <th className="py-3 px-2 bg-white">Heure d'envoi</th>
+                  <th className="py-3 px-2 bg-white">Statut</th>
+                  <th className="py-3 px-2 bg-white text-right">Recette Brute</th>
+                  <th className="py-3 px-2 bg-white text-right">Cash Net</th>
+                  <th className="py-3 px-2 bg-white text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -379,9 +379,9 @@ export default function AdminDashboardPage() {
 
                   return (
                     <tr key={c.id || bDate} className="hover:bg-gray-50">
-                      <td className="py-3 font-bold">{bDate}</td>
-                      <td className="py-3 text-xs text-blue-600 font-mono">{realTime}</td>
-                      <td className="py-3">
+                      <td className="py-3 px-2 font-bold">{bDate}</td>
+                      <td className="py-3 px-2 text-xs text-blue-600 font-mono">{realTime}</td>
+                      <td className="py-3 px-2">
                         {dayAttempts.length > 0 ? (
                           <span className="bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs font-bold border border-amber-200">
                             ⚠️ Modifiée ({dayAttempts.length} version(s))
@@ -390,9 +390,9 @@ export default function AdminDashboardPage() {
                           <span className="text-gray-500 text-xs">Standard</span>
                         )}
                       </td>
-                      <td className="py-3 text-right font-mono font-bold text-green-700">{grossRev.toLocaleString()} MAD</td>
-                      <td className="py-3 text-right font-mono font-bold">{netCsh.toLocaleString()} MAD</td>
-                      <td className="py-3 text-center">
+                      <td className="py-3 px-2 text-right font-mono font-bold text-green-700">{grossRev.toLocaleString()} MAD</td>
+                      <td className="py-3 px-2 text-right font-mono font-bold">{netCsh.toLocaleString()} MAD</td>
+                      <td className="py-3 px-2 text-center">
                         <button onClick={() => setSelectedClosure(c)} className="px-3 py-1.5 bg-gray-900 text-white text-xs font-bold rounded-lg hover:bg-gray-800">Voir Détails</button>
                       </td>
                     </tr>
