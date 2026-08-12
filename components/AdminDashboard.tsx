@@ -132,10 +132,22 @@ export default function AdminDashboardPage() {
     router.push('/');
   };
 
+  // --- FILTER CLOSURES BY MONTH ---
   const filteredClosures = closures.filter((c) => {
     const bDate = String(c.business_date || c.businessDate || c.date || '');
     if (!selectedMonth) return true;
     return bDate.includes(selectedMonth);
+  }).sort((a, b) => {
+    const d1 = new Date(a.business_date || a.businessDate || a.date || 0).getTime();
+    const d2 = new Date(b.business_date || b.businessDate || b.date || 0).getTime();
+    return d1 - d2;
+  });
+
+  // --- FILTER SUPPLIES BY MONTH ---
+  const filteredSupplies = supplies.filter((s) => {
+    const sDate = String(s.business_date || s.businessDate || s.date || '');
+    if (!selectedMonth) return true;
+    return sDate.includes(selectedMonth);
   }).sort((a, b) => {
     const d1 = new Date(a.business_date || a.businessDate || a.date || 0).getTime();
     const d2 = new Date(b.business_date || b.businessDate || b.date || 0).getTime();
@@ -182,8 +194,9 @@ export default function AdminDashboardPage() {
     ],
   };
 
+  // Only use filteredSupplies for the inventory calculation
   const inventoryVolumes: Record<string, number> = {};
-  supplies.forEach(s => {
+  filteredSupplies.forEach(s => {
     (s.items || s.supply_items || []).forEach((i: any) => {
       const itemName = i.label || i.code;
       if (itemName) {
@@ -298,8 +311,8 @@ export default function AdminDashboardPage() {
 
           {/* DETAILED DAILY PURCHASES TABLE */}
           <div className="border-t pt-6 space-y-4">
-            <h4 className="text-base font-bold text-gray-800">Détails Journaliers des Achats ({supplies.length})</h4>
-            {supplies.length > 0 ? (
+            <h4 className="text-base font-bold text-gray-800">Détails Journaliers des Achats ({filteredSupplies.length})</h4>
+            {filteredSupplies.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
@@ -310,7 +323,7 @@ export default function AdminDashboardPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {supplies.map((s, idx) => {
+                    {filteredSupplies.map((s, idx) => {
                       const sDate = s.business_date || s.businessDate || s.date;
                       const buyer = s.buyer_name || s.buyerName || 'Salem';
                       const itemsList = s.items || s.supply_items || [];
