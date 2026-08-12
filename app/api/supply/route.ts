@@ -16,11 +16,15 @@ export async function GET(request: NextRequest) {
     }
     
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching supplies:', error);
+      return NextResponse.json({ supplies: [], error: error.message }, { status: 500 });
+    }
     
     return NextResponse.json({ supplies: data || [] });
   } catch (err: any) {
-    return NextResponse.json({ supplies: [] }, { status: 200 });
+    console.error('Supply GET Error:', err);
+    return NextResponse.json({ supplies: [], error: err.message }, { status: 500 });
   }
 }
 
@@ -42,7 +46,10 @@ export async function POST(request: NextRequest) {
       submitted_at: new Date().toISOString()
     });
     
-    if (error) throw error;
+    if (error) {
+      console.error('Supply Insert Error:', error);
+      throw error;
+    }
     
     return NextResponse.json({ success: true });
   } catch (err: any) {

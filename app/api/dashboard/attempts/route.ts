@@ -9,8 +9,6 @@ export async function GET(request: NextRequest) {
     const month = searchParams.get('month');
     
     const supabase = getSupabaseAdminClient();
-    
-    // Query the exact table name used in your submit route
     let query = supabase.from('closure_submission_attempts').select('*').order('created_at', { ascending: false });
     
     if (month) {
@@ -18,10 +16,14 @@ export async function GET(request: NextRequest) {
     }
     
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching attempts:', error);
+      return NextResponse.json({ attempts: [], error: error.message }, { status: 500 });
+    }
     
     return NextResponse.json({ attempts: data || [] });
   } catch (err: any) {
-    return NextResponse.json({ attempts: [] }, { status: 200 });
+    console.error('Attempts API Error:', err);
+    return NextResponse.json({ attempts: [], error: err.message }, { status: 500 });
   }
 }
