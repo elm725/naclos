@@ -14,13 +14,29 @@ export default function AdminDashboard() {
   const [supplies, setSupplies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const d = new Date();
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     return `${year}-${month}`;
   });
+  
   const [selectedClosure, setSelectedClosure] = useState<any | null>(null);
+
+  // --- MONTHLY SUMMARY STATE ---
+  const [fixedExpenses, setFixedExpenses] = useState<{id: string | number, label: string, amount: number}[]>([]);
+  const [staffSalaries, setStaffSalaries] = useState<{id: string | number, name: string, baseSalary: number}[]>([]);
+  const [isSavingSummary, setIsSavingSummary] = useState(false);
+
+  const addFixedExpense = () => setFixedExpenses([...fixedExpenses, { id: Date.now(), label: '', amount: 0 }]);
+  const updateFixedExpense = (id: string | number, field: string, val: any) => setFixedExpenses(fixedExpenses.map(e => e.id === id ? { ...e, [field]: val } : e));
+  const removeFixedExpense = (id: string | number) => setFixedExpenses(fixedExpenses.filter(e => e.id !== id));
+
+  const addStaff = () => setStaffSalaries([...staffSalaries, { id: Date.now(), name: '', baseSalary: 0 }]);
+  const updateStaff = (id: string | number, field: string, val: any) => setStaffSalaries(staffSalaries.map(s => s.id === id ? { ...s, [field]: val } : s));
+  const removeStaff = (id: string | number) => setStaffSalaries(staffSalaries.filter(s => s.id !== id));
+  // -------------------------------------
 
   useEffect(() => {
     fetchData();
@@ -31,8 +47,6 @@ export default function AdminDashboard() {
     setFetchError(null);
     try {
       const timestamp = Date.now();
-      
-      // Strict headers to force Vercel to bypass all cache layers
       const fetchOptions = {
         cache: 'no-store' as RequestCache,
         headers: {
@@ -42,10 +56,11 @@ export default function AdminDashboard() {
         },
       };
 
-      const [closuresRes, attemptsRes, supplyRes] = await Promise.all([
+      const [closuresRes, attemptsRes, supplyRes, summaryRes] = await Promise.all([
         fetch(`/api/closure/list?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null),
         fetch(`/api/dashboard/attempts?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null),
-        fetch(`/api/supply?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null)
+        fetch(`/api/supply?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null),
+        fetch(`/api/dashboard/summary?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null)
       ]);
       
       const errors: string[] = [];
@@ -53,38 +68,59 @@ export default function AdminDashboard() {
       if (closuresRes && closuresRes.ok) {
         const cData = await closuresRes.json();
         setClosures(cData.closures || cData || []);
-      } else if (closuresRes) {
-        errors.push(`Clôtures (${closuresRes.status})`);
-      } else {
-        errors.push('Clôtures (réseau)');
-      }
+      } else if (closuresRes) errors.push(`Clôtures (${closuresRes.status})`);
+      else errors.push('Clôtures (réseau)');
 
       if (attemptsRes && attemptsRes.ok) {
         const attData = await attemptsRes.json();
         setAttempts(attData.attempts || attData || []);
-      } else if (attemptsRes) {
-        errors.push(`Tentatives (${attemptsRes.status})`);
-      } else {
-        errors.push('Tentatives (réseau)');
-      }
+      } else if (attemptsRes) errors.push(`Tentatives (${attemptsRes.status})`);
+      else errors.push('Tentatives (réseau)');
 
       if (supplyRes && supplyRes.ok) {
         const sData = await supplyRes.json();
         setSupplies(sData.supplies || sData || []);
-      } else if (supplyRes) {
-        errors.push(`Achats (${supplyRes.status})`);
+      } else if (supplyRes) errors.push(`Achats (${supplyRes.status})`);
+      else errors.push('Achats (réseau)');
+
+      // Fetch the saved monthly summary configurations
+      if (summaryRes && summaryRes.ok) {
+        const sumData = await summaryRes.json();
+        setFixedExpenses(sumData.expenses.map((e: any) => ({ id: e.id, label: e.label, amount: e.amount })));
+        setStaffSalaries(sumData.salaries.map((s: any) => ({ id: s.id, name: s.name, baseSalary: s.base_salary })));
       } else {
-        errors.push('Achats (réseau)');
+        setFixedExpenses([]);
+        setStaffSalaries([]);
       }
 
-      if (errors.length > 0) {
-        setFetchError(`Échec de récupération : ${errors.join(', ')}`);
-      }
+      if (errors.length > 0) setFetchError(`Échec de récupération : ${errors.join(', ')}`);
     } catch (err) {
       console.error('Error fetching data:', err);
       setFetchError('Erreur inattendue lors de la récupération des données.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const saveMonthlySummary = async () => {
+    setIsSavingSummary(true);
+    try {
+      const res = await fetch('/api/dashboard/summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          month: selectedMonth,
+          expenses: fixedExpenses,
+          salaries: staffSalaries
+        })
+      });
+      if (!res.ok) throw new Error('Échec de la sauvegarde');
+      alert('Bilan mensuel sauvegardé avec succès !');
+    } catch (err) {
+      console.error(err);
+      alert('Erreur lors de la sauvegarde du bilan.');
+    } finally {
+      setIsSavingSummary(false);
     }
   };
 
@@ -156,14 +192,28 @@ export default function AdminDashboard() {
   const inventoryChartData = {
     labels: Object.keys(inventoryVolumes),
     datasets: [
-      {
-        label: 'Volume Acheté (Ce Mois)',
-        data: Object.values(inventoryVolumes),
-        backgroundColor: 'rgba(59, 130, 246, 0.8)',
-        borderRadius: 4,
-      }
+      { label: 'Volume Acheté (Ce Mois)', data: Object.values(inventoryVolumes), backgroundColor: 'rgba(59, 130, 246, 0.8)', borderRadius: 4 }
     ]
   };
+
+  // --- MONTHLY SUMMARY MATH ---
+  const getStaffAdvance = (name: string) => {
+    if (!name) return 0;
+    const searchName = name.toLowerCase().trim();
+    let totalAdv = 0;
+    Object.keys(staffAdvancesMap).forEach(key => {
+      if (key.toLowerCase().trim() === searchName) {
+        totalAdv += staffAdvancesMap[key];
+      }
+    });
+    return totalAdv;
+  };
+
+  const totalFixedExpenses = fixedExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+  const totalBaseSalaries = staffSalaries.reduce((sum, s) => sum + (Number(s.baseSalary) || 0), 0);
+  const totalOverallExpenses = totalExpenses + totalFixedExpenses + totalBaseSalaries;
+  const monthlyNetProfit = totalRevenue - totalOverallExpenses;
+  const monthlyExpenseRatio = totalRevenue > 0 ? ((totalOverallExpenses / totalRevenue) * 100).toFixed(1) : '0';
 
   const selectedClosureDate = selectedClosure ? (selectedClosure.business_date || selectedClosure.businessDate || selectedClosure.date) : null;
   const selectedClosureAttempts = selectedClosureDate
@@ -189,7 +239,7 @@ export default function AdminDashboard() {
 
       {fetchError && (
         <div className="bg-red-50 border border-red-200 text-red-800 text-sm font-semibold px-4 py-3 rounded-xl">
-          ⚠️ {fetchError} — vérifiez la console pour plus de détails, ou réessayez.
+          ⚠️ {fetchError}
           <button onClick={fetchData} className="ml-3 underline font-bold">Réessayer</button>
         </div>
       )}
@@ -210,7 +260,7 @@ export default function AdminDashboard() {
           <p className="text-xs text-gray-500">Moy. Dépenses: {avgDailyExpenses.toFixed(0)} MAD</p>
         </div>
         <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-1">
-          <span className="text-xs text-gray-400 font-bold uppercase">Ratio Dépenses / Recette</span>
+          <span className="text-xs text-gray-400 font-bold uppercase">Ratio Dépenses (Quotidien)</span>
           <div className="text-2xl font-extrabold text-red-600 font-mono">{expenseRatio}%</div>
           <p className="text-xs text-gray-500">Total Dépenses: {totalExpenses.toLocaleString()} MAD</p>
         </div>
@@ -237,14 +287,7 @@ export default function AdminDashboard() {
           <h3 className="text-lg font-bold text-gray-900 mb-4">Volume des Achats (Marchandise Salem)</h3>
           {Object.keys(inventoryVolumes).length > 0 ? (
             <div className="h-[450px]">
-               <Bar
-                 data={inventoryChartData}
-                 options={{
-                   responsive: true,
-                   maintainAspectRatio: false,
-                   scales: { y: { beginAtZero: true } }
-                 }}
-               />
+               <Bar data={inventoryChartData} options={{ responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }} />
             </div>
           ) : (
             <p className="text-sm text-gray-400 text-center py-12">Aucun achat enregistré ce mois par Salem.</p>
@@ -260,7 +303,7 @@ export default function AdminDashboard() {
               <thead>
                 <tr className="border-b text-xs text-gray-400 uppercase">
                   <th className="pb-3">Date Prévue</th>
-                  <th className="pb-3">Heure d'envoi (Réelle)</th>
+                  <th className="pb-3">Heure d'envoi</th>
                   <th className="pb-3">Statut</th>
                   <th className="pb-3 text-right">Recette Brute</th>
                   <th className="pb-3 text-right">Cash Net</th>
@@ -302,7 +345,7 @@ export default function AdminDashboard() {
         </div>
 
         <div className="bg-white p-6 rounded-2xl shadow-sm border space-y-4">
-          <h3 className="text-lg font-bold text-gray-900">Avances & Salaires (Personnel)</h3>
+          <h3 className="text-lg font-bold text-gray-900">Avances (Personnel)</h3>
           <div className="space-y-3">
             {Object.keys(staffAdvancesMap).length > 0 ? (
               Object.entries(staffAdvancesMap).map(([name, totalAmt]) => (
@@ -318,39 +361,114 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-2xl shadow-sm border space-y-4">
-        <h3 className="text-lg font-bold text-gray-900">Achats Marchandise (Salem)</h3>
-        {supplies.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b text-xs text-gray-400 uppercase">
-                  <th className="pb-3">Date d'achat</th>
-                  <th className="pb-3">Heure de saisie (Réelle)</th>
-                  <th className="pb-3">Articles achetés</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {supplies.map((s) => (
-                  <tr key={s.id} className="hover:bg-gray-50">
-                    <td className="py-3 font-bold">{s.business_date || s.businessDate}</td>
-                    <td className="py-3 text-xs text-blue-600 font-mono">{new Date(s.submitted_at || s.created_at || new Date()).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short'})}</td>
-                    <td className="py-3 text-xs">
-                      {(s.items || []).map((i: any, idx: number) => (
-                        <span key={idx} className="inline-block bg-gray-100 rounded px-2 py-1 mr-2 mb-1 border font-medium">
-                          {i.label || i.code}: <strong className="text-gray-900">{i.quantity} {i.unit}</strong>
-                        </span>
-                      ))}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* ========================================= */}
+      {/* SECTION: MONTHLY SUMMARY & PAYROLL        */}
+      {/* ========================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8 border-t-2 border-gray-200 pt-8">
+        <div className="space-y-6">
+          
+          <div className="bg-white p-6 rounded-2xl shadow-sm border space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-bold text-gray-900">Calcul des Salaires</h3>
+              <button onClick={addStaff} className="text-xs bg-blue-50 text-blue-600 font-bold px-3 py-1.5 rounded-lg hover:bg-blue-100">+ Ajouter Personnel</button>
+            </div>
+            {staffSalaries.length === 0 && <p className="text-xs text-gray-400 italic">Ajoutez votre personnel pour calculer les salaires nets après déduction des avances.</p>}
+            
+            <div className="space-y-3">
+              {staffSalaries.map(staff => {
+                const adv = getStaffAdvance(staff.name);
+                const net = (Number(staff.baseSalary) || 0) - adv;
+                return (
+                  <div key={staff.id} className="p-3 bg-gray-50 rounded-xl border space-y-3">
+                    <div className="flex gap-2 items-center">
+                      <input type="text" placeholder="Nom complet" value={staff.name} onChange={e => updateStaff(staff.id, 'name', e.target.value)} className="flex-1 p-2 border rounded-lg text-sm font-bold outline-none" />
+                      <input type="number" placeholder="Salaire base" value={staff.baseSalary === 0 ? '' : staff.baseSalary} onChange={e => updateStaff(staff.id, 'baseSalary', e.target.value)} className="w-32 p-2 border rounded-lg text-sm font-bold outline-none" />
+                      <button onClick={() => removeStaff(staff.id)} className="text-red-500 font-bold p-2 hover:bg-red-50 rounded-lg">✕</button>
+                    </div>
+                    {staff.name && (
+                      <div className="flex justify-between items-center text-xs px-2 py-1 bg-white rounded border">
+                        <span className="text-gray-500">Avances: <span className="font-bold text-red-500">-{adv} MAD</span></span>
+                        <span className="font-bold text-gray-900">À payer: <span className={net < 0 ? 'text-red-600' : 'text-green-600'}>{net} MAD</span></span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
-        ) : (
-          <p className="text-xs text-gray-500 italic">Aucun achat enregistré ce mois-ci par Salem.</p>
-        )}
+
+          <div className="bg-white p-6 rounded-2xl shadow-sm border space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-bold text-gray-900">Dépenses Fixes</h3>
+              <button onClick={addFixedExpense} className="text-xs bg-blue-50 text-blue-600 font-bold px-3 py-1.5 rounded-lg hover:bg-blue-100">+ Ajouter Charge</button>
+            </div>
+            {fixedExpenses.length === 0 && <p className="text-xs text-gray-400 italic">Ajoutez les charges fixes du mois (Loyer, etc.) pour le bilan final.</p>}
+            
+            <div className="space-y-2">
+              {fixedExpenses.map(exp => (
+                <div key={exp.id} className="flex gap-2 items-center">
+                  <input type="text" placeholder="Description de la charge" value={exp.label} onChange={e => updateFixedExpense(exp.id, 'label', e.target.value)} className="flex-1 p-2 border rounded-lg text-sm font-bold outline-none" />
+                  <input type="number" placeholder="Montant" value={exp.amount === 0 ? '' : exp.amount} onChange={e => updateFixedExpense(exp.id, 'amount', e.target.value)} className="w-32 p-2 border rounded-lg text-sm font-bold outline-none" />
+                  <button onClick={() => removeFixedExpense(exp.id)} className="text-red-500 font-bold p-2 hover:bg-red-50 rounded-lg">✕</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-900 p-8 rounded-3xl shadow-xl text-white flex flex-col justify-between">
+          <div className="space-y-6">
+            <h3 className="text-2xl font-bold text-blue-400 border-b border-gray-700 pb-4">Bilan Global Mensuel</h3>
+            
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400 text-sm">Recette Mensuelle (Brute)</span>
+              <span className="font-mono text-lg font-bold text-green-400">+{totalRevenue.toLocaleString()} MAD</span>
+            </div>
+            
+            <div className="space-y-2 pt-4 border-t border-gray-800">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-500">Achats & Dépenses Journalières</span>
+                <span className="font-mono font-bold text-red-400">-{totalExpenses.toLocaleString()} MAD</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-500">Masse Salariale (Base)</span>
+                <span className="font-mono font-bold text-red-400">-{totalBaseSalaries.toLocaleString()} MAD</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-500">Dépenses Fixes Mensuelles</span>
+                <span className="font-mono font-bold text-red-400">-{totalFixedExpenses.toLocaleString()} MAD</span>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center pt-4 border-t border-gray-800">
+              <span className="text-gray-400 text-sm">Total des Charges Globales</span>
+              <span className="font-mono text-lg font-bold text-red-500">-{totalOverallExpenses.toLocaleString()} MAD</span>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400 text-sm">Ratio Global Dépenses / Recette</span>
+              <span className="font-mono font-bold text-yellow-400">{monthlyExpenseRatio}%</span>
+            </div>
+          </div>
+
+          <div className="mt-8 space-y-4">
+            <div className="bg-black/30 p-6 rounded-2xl border border-gray-700 text-center">
+              <span className="block text-gray-400 text-xs font-bold uppercase mb-1">Bénéfice Net Mensuel Réel</span>
+              <span className={`text-4xl font-extrabold font-mono ${monthlyNetProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {monthlyNetProfit > 0 ? '+' : ''}{monthlyNetProfit.toLocaleString()} MAD
+              </span>
+            </div>
+            <button 
+              onClick={saveMonthlySummary}
+              disabled={isSavingSummary}
+              className="w-full py-4 bg-blue-600 hover:bg-blue-500 transition text-white font-bold rounded-xl shadow-lg disabled:opacity-50"
+            >
+              {isSavingSummary ? 'Sauvegarde en cours...' : '💾 Sauvegarder le Bilan Mensuel'}
+            </button>
+          </div>
+        </div>
       </div>
+      {/* ========================================= */}
       </>
       )}
 
