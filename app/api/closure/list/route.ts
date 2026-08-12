@@ -3,6 +3,14 @@ import { getSupabaseAdminClient } from '@/lib/supabaseClient';
 
 export const dynamic = 'force-dynamic';
 
+const noStoreHeaders = {
+  'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+  'CDN-Cache-Control': 'no-store',
+  'Vercel-CDN-Cache-Control': 'no-store',
+  Pragma: 'no-cache',
+  Expires: '0',
+};
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdminClient();
@@ -31,12 +39,8 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    return NextResponse.json({ closures: closuresWithDetails }, {
-      headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate',
-      }
-    });
+    return NextResponse.json({ closures: closuresWithDetails }, { headers: noStoreHeaders });
   } catch (err: any) {
-    return NextResponse.json({ closures: [], error: err.message }, { status: 500 });
+    return NextResponse.json({ closures: [], error: err.message }, { status: 500, headers: noStoreHeaders });
   }
 }

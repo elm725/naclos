@@ -33,9 +33,9 @@ export default function AdminDashboard() {
     try {
       const timestamp = Date.now();
       const [closuresRes, attemptsRes, supplyRes] = await Promise.all([
-        fetch(`/api/closure/list?_t=${timestamp}`).catch(() => null),
-        fetch(`/api/dashboard/attempts?month=${selectedMonth}&_t=${timestamp}`).catch(() => null),
-        fetch(`/api/supply?month=${selectedMonth}&_t=${timestamp}`).catch(() => null)
+        fetch(`/api/closure/list?_t=${timestamp}`, { cache: 'no-store' }).catch(() => null),
+        fetch(`/api/dashboard/attempts?month=${selectedMonth}&_t=${timestamp}`, { cache: 'no-store' }).catch(() => null),
+        fetch(`/api/supply?month=${selectedMonth}&_t=${timestamp}`, { cache: 'no-store' }).catch(() => null)
       ]);
       const errors: string[] = [];
 
