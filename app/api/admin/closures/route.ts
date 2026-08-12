@@ -36,6 +36,17 @@ function parseBusinessDates(value: unknown): string[] {
     .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date));
 }
 
+function parseClosureIds(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter((id): id is string => typeof id === 'string')
+    .map((id) => id.trim())
+    .filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id));
+}
+
 export async function DELETE(request: NextRequest) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: noStoreHeaders });
@@ -44,20 +55,28 @@ export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
     const businessDates = parseBusinessDates(body.businessDates);
+    const closureIds = parseClosureIds(body.closureIds);
 
-    if (businessDates.length === 0) {
+    if (businessDates.length === 0 && closureIds.length === 0) {
       return NextResponse.json(
-        { error: 'Provide businessDates as an array of YYYY-MM-DD strings.' },
+        { error: 'Provide closureIds as UUID strings or businessDates as YYYY-MM-DD strings.' },
         { status: 400, headers: noStoreHeaders }
       );
     }
 
     const supabase = getSupabaseAdminClient();
 
-    const { data: matchingClosures, error: lookupError } = await supabase
+    let lookup = supabase
       .from('daily_closures')
-      .select('id,business_date,manager_name,gross_revenue,created_at')
-      .in('business_date', businessDates);
+      .select('id,business_date,manager_name,gross_revenue,created_at');
+
+    if (closureIds.length > 0) {
+      lookup = lookup.in('id', closureIds);
+    } else {
+      lookup = lookup.in('business_date', businessDates);
+    }
+
+    const { data: matchingClosures, error: lookupError } = await lookup;
 
     if (lookupError) {
       throw lookupError;
@@ -70,6 +89,10 @@ export async function DELETE(request: NextRequest) {
           deletedCount: 0,
           deletedClosures: [],
           projectRef: getSupabaseProjectRef(),
+          searched: {
+            closureIds,
+            businessDates,
+          },
         },
         { headers: noStoreHeaders }
       );
