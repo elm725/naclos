@@ -55,13 +55,26 @@ export default function DailyEntryForm() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Fetch staff names dynamically based on the selected month
+  // Fetch staff names dynamically based on the selected month (Robust version)
   useEffect(() => {
     const fetchStaffForMonth = async () => {
       if (!businessDate) return;
-      const monthStr = businessDate.substring(0, 7); // Extracts 'YYYY-MM'
-      const timestamp = Date.now();
       
+      let monthStr = '';
+      if (businessDate.includes('-') && businessDate.indexOf('-') === 4) {
+        monthStr = businessDate.substring(0, 7); // Standard 'YYYY-MM'
+      } else {
+        const parts = businessDate.split(/[\/\-]/);
+        if (parts.length === 3) {
+          const year = parts[0].length === 4 ? parts[0] : parts[2];
+          const month = parts[0].length === 4 ? parts[1] : parts[0];
+          monthStr = `${year}-${month.padStart(2, '0')}`;
+        }
+      }
+
+      if (!monthStr || monthStr.length !== 7) return;
+
+      const timestamp = Date.now();
       try {
         const res = await fetch(`/api/dashboard/summary?month=${monthStr}&_t=${timestamp}`);
         if (res.ok) {
@@ -137,7 +150,6 @@ export default function DailyEntryForm() {
     setLoading(true);
     setMessage(null);
 
-    // Map the dropdowns back to a simple string payload for the database
     const payload = {
       businessDate: businessDate,
       storeId: 'main',
