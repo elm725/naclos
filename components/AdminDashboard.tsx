@@ -296,7 +296,20 @@ export default function AdminDashboardPage() {
         <div className="bg-white p-6 rounded-2xl shadow-sm border">
           <h3 className="text-lg font-bold text-gray-900 mb-4">Évolution des Recettes et Dépenses</h3>
           {filteredClosures.length > 0 ? (
-            <div className="h-[450px]"><Line data={chartData} options={{ responsive: true, maintainAspectRatio: false }} /></div>
+            <div className="h-[450px]">
+              <Line 
+                data={chartData} 
+                options={{ 
+                  responsive: true, 
+                  maintainAspectRatio: false,
+                  scales: {
+                    y: {
+                      beginAtZero: true
+                    }
+                  }
+                }} 
+              />
+            </div>
           ) : (
             <p className="text-sm text-gray-400 text-center py-12">Aucune donnée disponible.</p>
           )}
