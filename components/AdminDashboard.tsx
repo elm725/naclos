@@ -229,6 +229,11 @@ export default function AdminDashboardPage() {
   const monthlyNetProfit = totalRevenue - totalOverallExpenses;
   const monthlyExpenseRatio = totalRevenue > 0 ? ((totalOverallExpenses / totalRevenue) * 100).toFixed(1) : '0';
 
+  // --- DYNAMIC PARTNER CALCULATIONS ---
+  const tayebAdvances = getStaffAdvance('Tayeb');
+  const noureddineShare = monthlyNetProfit / 2;
+  const tayebShare = (monthlyNetProfit / 2) - tayebAdvances;
+
   const selectedClosureDate = selectedClosure ? (selectedClosure.business_date || selectedClosure.businessDate || selectedClosure.date) : null;
   const selectedClosureAttempts = selectedClosureDate
     ? attempts.filter(a => String(a.closure_date || '').includes(selectedClosureDate))
@@ -546,7 +551,43 @@ export default function AdminDashboardPage() {
 
         </div>
       </div>
+
       {/* ========================================= */}
+      {/* NEW PARTNER SPLIT PANEL (50% / 50%)        */}
+      {/* ========================================= */}
+      <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-xl border border-slate-800 mt-8">
+        <h3 className="text-lg font-bold mb-4 flex items-center justify-between">
+          <span>Partage des Parts (50% / 50%)</span>
+          <span className="text-xs bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/30">Mr. Noureddine & Tayeb</span>
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Part de Mr. Noureddine */}
+          <div className="bg-slate-800/60 p-5 rounded-2xl border border-slate-700/50 space-y-1">
+            <p className="text-xs uppercase tracking-wider text-slate-400 font-bold">Part de Mr. Noureddine (50%)</p>
+            <p className="text-3xl font-extrabold text-emerald-400 font-mono mt-1">
+              {noureddineShare.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
+            </p>
+            <p className="text-xs text-slate-500">50% du bénéfice net réel du mois</p>
+          </div>
+
+          {/* Part de Tayeb (Net / 2 minus his advances) */}
+          <div className="bg-slate-800/60 p-5 rounded-2xl border border-slate-700/50 space-y-1">
+            <p className="text-xs uppercase tracking-wider text-slate-400 font-bold">Part de Tayeb (50% - Avances)</p>
+            <div className="flex items-baseline justify-between mt-1">
+              <p className="text-3xl font-extrabold text-emerald-400 font-mono">
+                {tayebShare.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
+              </p>
+              <span className="text-xs font-semibold text-rose-400 bg-rose-500/10 px-2.5 py-1 rounded-lg border border-rose-500/20">
+                Avances prises: -{tayebAdvances} MAD
+              </span>
+            </div>
+            <p className="text-xs text-slate-500">Déduction automatique de ses avances de la table staff_advances</p>
+          </div>
+        </div>
+      </div>
+      {/* ========================================= */}
+
       </>
       )}
 
