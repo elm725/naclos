@@ -1,44 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/supabaseClient';
 
-// 1. Force Vercel to disable all caching layers for this route
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
 export async function GET(request: NextRequest) {
   try {
-    // 2. Explicitly read the search parameter so Vercel knows this is a dynamic request
-    const _t = request.nextUrl.searchParams.get('_t');
-
     const supabase = getSupabaseAdminClient();
     
+    // Fetch closures AND all related child tables in a single, lightning-fast database trip
     const { data: closures, error: closuresError } = await supabase
       .from('daily_closures')
-      .select('*')
-      .order('business_date', { ascending: false });
+      .select(`
+        *,
+        expenses (*),
+        staff_advances (*),
+        inventory_logs (*, raw_materials(code, label_fr))
+      `)
+      .order('business_date', { ascending: false })
+      .limit(31);
 
     if (closuresError) throw closuresError;
 
-    const closuresWithDetails = await Promise.all(
-      (closures || []).map(async (c) => {
-        const [expRes, advRes, invRes] = await Promise.all([
-          supabase.from('expenses').select('*').eq('closure_id', c.id),
-          supabase.from('staff_advances').select('*').eq('closure_id', c.id),
-          supabase.from('inventory_logs').select('*, raw_materials(code, label_fr)').eq('closure_id', c.id)
-        ]);
-
-        return {
-          ...c,
-          expenses: expRes.data || [],
-          staffAdvances: advRes.data || [],
-          inventory_logs: invRes.data || []
-        };
-      })
-    );
-
-    // 3. Send bulletproof cache-busting headers back to the client
-    return NextResponse.json({ closures: closuresWithDetails }, {
+    return NextResponse.json({ closures }, {
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
         'Pragma': 'no-cache',
@@ -46,6 +31,7 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (err: any) {
+    console.error('API /closure/list ERROR:', err);
     return NextResponse.json({ closures: [], error: err.message }, { status: 500 });
   }
 }

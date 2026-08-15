@@ -345,6 +345,7 @@ export default function AdminDashboardPage() {
   const monthlyNetProfit = totalRevenue - totalOverallExpenses;
   const monthlyExpenseRatio = totalRevenue > 0 ? ((totalOverallExpenses / totalRevenue) * 100).toFixed(1) : '0';
 
+  // --- DYNAMIC PARTNER CALCULATIONS WITH ADVANCE DEDUCTION ---
   const tayebAdvances = getStaffAdvance('Tayeb');
   const noureddineShare = monthlyNetProfit / 2;
   const tayebShare = (monthlyNetProfit / 2) - tayebAdvances;
@@ -867,16 +868,16 @@ export default function AdminDashboardPage() {
                         {tayebShare.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
                       </p>
                       <span className="text-xs font-semibold px-2.5 py-1 rounded-lg font-num" style={{ background: ACCENT.clay.soft, color: ACCENT.clay.hex, border: `1px solid ${ACCENT.clay.hex}30` }}>
-                        Avances : -{tayebAdvances} MAD
+                        Avances du mois : -{tayebAdvances.toLocaleString()} MAD
                       </span>
                     </div>
-                    <p className="text-xs" style={{ color: TEXT_FAINT }}>Déduction automatique de ses avances (staff_advances)</p>
+                    <p className="text-xs" style={{ color: TEXT_FAINT }}>50% du bénéfice net moins ses avances de caisse enregistrées</p>
                   </div>
                 </div>
 
                 <div className="mt-5 pt-5 flex items-center justify-between text-xs" style={{ borderTop: `1px solid ${HAIRLINE}`, color: TEXT_FAINT }}>
-                  <span>Basé sur le bénéfice net mensuel réel</span>
-                  <span className="font-num font-bold" style={{ color: TEXT_MUTED }}>{monthlyNetProfit.toLocaleString()} MAD</span>
+                  <span>Basé sur le bénéfice net mensuel réel (Total net: {monthlyNetProfit.toLocaleString()} MAD)</span>
+                  <span className="font-num font-bold" style={{ color: TEXT_MUTED }}>Total Partage : {(noureddineShare + tayebShare).toLocaleString()} MAD</span>
                 </div>
               </Card>
             )}

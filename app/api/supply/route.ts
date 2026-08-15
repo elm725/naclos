@@ -52,6 +52,28 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
+    // --- SMART EMAIL TRIGGER ---
+    // Check if Tayeb already submitted a closure for this date
+    const { data: existingClosure } = await supabase
+      .from('daily_closures')
+      .select('id')
+      .eq('business_date', payload.businessDate)
+      .maybeSingle();
+
+    if (existingClosure) {
+      // Tayeb submitted first, so Salem is the second one. Trigger the email!
+      await supabase.from('report_deliveries').delete().eq('closure_id', existingClosure.id);
+      
+      const reportUrl = new URL('/api/reports/email', request.url);
+      fetch(reportUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-cron-secret': process.env.CRON_SECRET || '' },
+        body: JSON.stringify({ closureId: existingClosure.id }),
+      }).catch(console.error);
+    } else {
+      console.log("Closure not yet submitted. Waiting for Tayeb to trigger the email.");
+    }
+
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error('Supabase Supply Error:', err);

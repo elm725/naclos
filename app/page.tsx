@@ -18,10 +18,14 @@ export default function WelcomePage() {
       sessionStorage.setItem('naclos_role', 'tayeb');
       router.push('/entry');
     } else if (pin === '1111') {
-      // Salem's PIN
       sessionStorage.setItem('naclos_authenticated', 'true');
       sessionStorage.setItem('naclos_role', 'salem');
       router.push('/supply');
+    } else if (pin === '1952') {
+      // Noureddine's PIN
+      sessionStorage.setItem('naclos_authenticated', 'true');
+      sessionStorage.setItem('naclos_role', 'noureddine');
+      router.push('/daily-report');
     } else if (pin === '9999') {
       sessionStorage.setItem('naclos_authenticated', 'true');
       sessionStorage.setItem('naclos_role', 'admin');

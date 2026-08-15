@@ -76,7 +76,6 @@ export async function POST(request: NextRequest) {
 
     // --- INTERCEPT AND BACKUP EXISTING DATA BEFORE OVERWRITE ---
     if (existing) {
-      // 1. Fetch the complete old record before we destroy it
       const { data: fullOldClosure } = await supabase
         .from('daily_closures')
         .select('*')
@@ -90,7 +89,6 @@ export async function POST(request: NextRequest) {
           supabase.from('inventory_logs').select('*, raw_materials(code, label_fr)').eq('closure_id', existing.id)
         ]);
 
-        // 2. Format it so the frontend dashboard modal can read it perfectly
         const oldDataSnapshot = {
           ...fullOldClosure,
           grossRevenue: fullOldClosure.gross_revenue, 
@@ -100,14 +98,12 @@ export async function POST(request: NextRequest) {
           notes: fullOldClosure.discrepancy_summary || ''
         };
 
-        // 3. Save the backup into the attempts table
         const { error: backupError } = await supabase.from('closure_submission_attempts').insert({
           closure_date: payload.businessDate,
           submitted_by: fullOldClosure.manager_name || payload.managerName,
           attempted_data: oldDataSnapshot,
         });
 
-        // STRICT HALT: If backup fails, abort the entire submission and show the error!
         if (backupError) {
           console.error('Failed to backup old closure data:', backupError);
           return NextResponse.json({ 
@@ -116,7 +112,6 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // --- PROCEED WITH STANDARD CLEANUP ---
       const cleanupResults = await Promise.all([
         supabase.from('expenses').delete().eq('closure_id', existing.id),
         supabase.from('staff_advances').delete().eq('closure_id', existing.id),
@@ -216,12 +211,25 @@ export async function POST(request: NextRequest) {
       detail: { notes: payload.notes },
     });
 
-    const reportUrl = new URL('/api/reports/email', request.url);
-    fetch(reportUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-cron-secret': process.env.CRON_SECRET || '' },
-      body: JSON.stringify({ closureId }),
-    }).catch(console.error);
+    // --- SMART EMAIL TRIGGER (WAITING FOR SALEM) ---
+    // Check if Salem has already submitted the supply purchases for this business date
+    const { data: supplyCheck } = await supabase
+      .from('supply_purchases')
+      .select('id')
+      .eq('business_date', payload.businessDate)
+      .maybeSingle();
+
+    if (supplyCheck) {
+      // Salem has already submitted, so Tayeb is second. Fire the report email!
+      const reportUrl = new URL('/api/reports/email', request.url);
+      fetch(reportUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-cron-secret': process.env.CRON_SECRET || '' },
+        body: JSON.stringify({ closureId }),
+      }).catch(console.error);
+    } else {
+      console.log('Supplies not yet submitted by Salem. Email dispatch waiting.');
+    }
 
     return NextResponse.json({ success: true, closureId });
   } catch (err: any) {
