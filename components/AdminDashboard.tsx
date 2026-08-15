@@ -8,49 +8,49 @@ import { Line, Bar } from 'react-chartjs-2';
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
 
 // =====================================================================
-// ICONS — small hand-rolled line icons so the page has no new deps.
+// ICONS — updated with optional style prop for TypeScript safety
 // =====================================================================
-const IconReceipt = ({ className = '' }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="none" className={className}>
+const IconReceipt = ({ className = '', style }: { className?: string; style?: React.CSSProperties }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className} style={style}>
     <path d="M6 3h12v17.5l-2.25-1.5-2.25 1.5-2.25-1.5L9 20.5 6.75 19 4.5 20.5V6a3 3 0 0 1 3-3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
     <path d="M8.5 8h7M8.5 11.5h7M8.5 15h4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
   </svg>
 );
-const IconBox = ({ className = '' }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="none" className={className}>
+const IconBox = ({ className = '', style }: { className?: string; style?: React.CSSProperties }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className} style={style}>
     <path d="M3.5 8 12 3.5 20.5 8 12 12.5 3.5 8Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
     <path d="M3.5 8v8L12 20.5m0 0 8.5-4.5V8M12 20.5V12.5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
   </svg>
 );
-const IconPie = ({ className = '' }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="none" className={className}>
+const IconPie = ({ className = '', style }: { className?: string; style?: React.CSSProperties }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className} style={style}>
     <path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5H12V3.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
     <path d="M15.5 3.9A8.5 8.5 0 0 1 20.1 8.5H15.5V3.9Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
   </svg>
 );
-const IconUsers = ({ className = '' }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="none" className={className}>
+const IconUsers = ({ className = '', style }: { className?: string; style?: React.CSSProperties }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className} style={style}>
     <circle cx="9" cy="8.5" r="3" stroke="currentColor" strokeWidth="1.5"/>
     <path d="M3.75 19c.6-3 2.6-4.7 5.25-4.7s4.65 1.7 5.25 4.7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
     <circle cx="16.5" cy="8.8" r="2.3" stroke="currentColor" strokeWidth="1.5"/>
     <path d="M15 14.6c2.2.1 3.85 1.6 4.35 4.1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
   </svg>
 );
-const IconHandshake = ({ className = '' }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="none" className={className}>
+const IconHandshake = ({ className = '', style }: { className?: string; style?: React.CSSProperties }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className} style={style}>
     <path d="M2.5 11.5 6 8l3 2.2 2.2-2.2c.7-.7 1.9-.7 2.6 0l.9.9-4.4 4.4a1.6 1.6 0 0 1-2.2 0L6 11.2" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"/>
     <path d="M14.7 8.9 18 8l3.5 3.5-3.4 3.4a1.7 1.7 0 0 1-2.4 0l-2.6-2.6" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"/>
     <path d="M8.4 13.9 10.2 15.7a1.6 1.6 0 0 0 2.3 0l.35-.35M11.2 16.9l.9.9a1.5 1.5 0 0 0 2.1 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
   </svg>
 );
-const IconRefresh = ({ className = '' }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="none" className={className}>
+const IconRefresh = ({ className = '', style }: { className?: string; style?: React.CSSProperties }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className} style={style}>
     <path d="M4 12a8 8 0 0 1 13.6-5.7M20 12a8 8 0 0 1-13.6 5.7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
     <path d="M17.2 3.8v3.1h-3.1M6.8 20.2v-3.1h3.1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
-const IconLogout = ({ className = '' }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="none" className={className}>
+const IconLogout = ({ className = '', style }: { className?: string; style?: React.CSSProperties }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className} style={style}>
     <path d="M14 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
     <path d="M9.5 12H21m0 0-3-3m3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
@@ -68,7 +68,7 @@ const TEXT_FAINT = '#5B5D63';
 type TabId = 'closures' | 'supplies' | 'summary' | 'salaries' | 'partnership';
 type AccentKey = 'sage' | 'slate' | 'plum' | 'gold' | 'clay';
 
-const TABS: { id: TabId; label: string; icon: React.FC<{ className?: string }>; accent: AccentKey }[] = [
+const TABS: { id: TabId; label: string; icon: React.FC<{ className?: string; style?: React.CSSProperties }>; accent: AccentKey }[] = [
   { id: 'closures', label: 'Clôtures du Jour', icon: IconReceipt, accent: 'sage' },
   { id: 'supplies', label: 'Achats & Stock', icon: IconBox, accent: 'slate' },
   { id: 'summary', label: 'Bilan Mensuel', icon: IconPie, accent: 'plum' },
