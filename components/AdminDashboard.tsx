@@ -7,10 +7,110 @@ import { Line, Bar } from 'react-chartjs-2';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
 
+// =====================================================================
+// ICONS — small hand-rolled line icons so the page has no new deps.
+// =====================================================================
+const IconReceipt = ({ className = '' }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className}>
+    <path d="M6 3h12v17.5l-2.25-1.5-2.25 1.5-2.25-1.5L9 20.5 6.75 19 4.5 20.5V6a3 3 0 0 1 3-3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+    <path d="M8.5 8h7M8.5 11.5h7M8.5 15h4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+  </svg>
+);
+const IconBox = ({ className = '' }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className}>
+    <path d="M3.5 8 12 3.5 20.5 8 12 12.5 3.5 8Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+    <path d="M3.5 8v8L12 20.5m0 0 8.5-4.5V8M12 20.5V12.5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+  </svg>
+);
+const IconPie = ({ className = '' }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className}>
+    <path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5H12V3.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+    <path d="M15.5 3.9A8.5 8.5 0 0 1 20.1 8.5H15.5V3.9Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+  </svg>
+);
+const IconUsers = ({ className = '' }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className}>
+    <circle cx="9" cy="8.5" r="3" stroke="currentColor" strokeWidth="1.5"/>
+    <path d="M3.75 19c.6-3 2.6-4.7 5.25-4.7s4.65 1.7 5.25 4.7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    <circle cx="16.5" cy="8.8" r="2.3" stroke="currentColor" strokeWidth="1.5"/>
+    <path d="M15 14.6c2.2.1 3.85 1.6 4.35 4.1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+  </svg>
+);
+const IconHandshake = ({ className = '' }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className}>
+    <path d="M2.5 11.5 6 8l3 2.2 2.2-2.2c.7-.7 1.9-.7 2.6 0l.9.9-4.4 4.4a1.6 1.6 0 0 1-2.2 0L6 11.2" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"/>
+    <path d="M14.7 8.9 18 8l3.5 3.5-3.4 3.4a1.7 1.7 0 0 1-2.4 0l-2.6-2.6" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"/>
+    <path d="M8.4 13.9 10.2 15.7a1.6 1.6 0 0 0 2.3 0l.35-.35M11.2 16.9l.9.9a1.5 1.5 0 0 0 2.1 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+  </svg>
+);
+const IconRefresh = ({ className = '' }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className}>
+    <path d="M4 12a8 8 0 0 1 13.6-5.7M20 12a8 8 0 0 1-13.6 5.7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+    <path d="M17.2 3.8v3.1h-3.1M6.8 20.2v-3.1h3.1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+const IconLogout = ({ className = '' }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className}>
+    <path d="M14 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M9.5 12H21m0 0-3-3m3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const BG = '#0B0C0E';
+const SURFACE = '#131417';
+const SURFACE_2 = '#191B1F';
+const HAIRLINE = 'rgba(255,255,255,0.07)';
+const HAIRLINE_STRONG = 'rgba(255,255,255,0.12)';
+const TEXT_PRIMARY = '#E4E2DD';
+const TEXT_MUTED = '#8B8D93';
+const TEXT_FAINT = '#5B5D63';
+
+type TabId = 'closures' | 'supplies' | 'summary' | 'salaries' | 'partnership';
+type AccentKey = 'sage' | 'slate' | 'plum' | 'gold' | 'clay';
+
+const TABS: { id: TabId; label: string; icon: React.FC<{ className?: string }>; accent: AccentKey }[] = [
+  { id: 'closures', label: 'Clôtures du Jour', icon: IconReceipt, accent: 'sage' },
+  { id: 'supplies', label: 'Achats & Stock', icon: IconBox, accent: 'slate' },
+  { id: 'summary', label: 'Bilan Mensuel', icon: IconPie, accent: 'plum' },
+  { id: 'salaries', label: 'Salaires & Avances', icon: IconUsers, accent: 'gold' },
+  { id: 'partnership', label: 'Partage des Parts', icon: IconHandshake, accent: 'clay' },
+];
+
+const ACCENT: Record<AccentKey, { hex: string; soft: string; text: string }> = {
+  sage:  { hex: '#7FA98A', soft: 'rgba(127,169,138,0.12)', text: 'text-[#8FB89A]' },
+  slate: { hex: '#6F93AC', soft: 'rgba(111,147,172,0.12)', text: 'text-[#82A4BB]' },
+  plum:  { hex: '#8E80A8', soft: 'rgba(142,128,168,0.12)', text: 'text-[#A296BB]' },
+  gold:  { hex: '#B99A66', soft: 'rgba(185,154,102,0.12)', text: 'text-[#C4A97C]' },
+  clay:  { hex: '#B1806F', soft: 'rgba(177,128,111,0.12)', text: 'text-[#BE9384]' },
+};
+
+const POS = '#7FA98A';
+const NEG = '#B1806F';
+
+function SectionEyebrow({ accent, children }: { accent: AccentKey; children: React.ReactNode }) {
+  const a = ACCENT[accent];
+  return (
+    <div className="flex items-center gap-2 mb-1.5">
+      <span className="w-1.5 h-1.5 rounded-full" style={{ background: a.hex }} />
+      <span className={`text-[11px] font-bold uppercase tracking-[0.14em] ${a.text}`}>{children}</span>
+    </div>
+  );
+}
+
+function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`rounded-2xl p-6 ${className}`} style={{ background: SURFACE, border: `1px solid ${HAIRLINE}` }}>
+      {children}
+    </div>
+  );
+}
+
+const chartTextColor = TEXT_MUTED;
+const chartGridColor = 'rgba(255,255,255,0.05)';
+
 export default function AdminDashboardPage() {
   const router = useRouter();
 
-  // SECURITY GUARD: Ensures only logged-in Admin can access
   useEffect(() => {
     const authRole = sessionStorage.getItem('naclos_role');
     const isAuth = sessionStorage.getItem('naclos_authenticated');
@@ -19,24 +119,26 @@ export default function AdminDashboardPage() {
     }
   }, [router]);
 
+  const [activeTab, setActiveTab] = useState<TabId>('closures');
+
   const [closures, setClosures] = useState<any[]>([]);
   const [attempts, setAttempts] = useState<any[]>([]);
   const [supplies, setSupplies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  
+
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const d = new Date();
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     return `${year}-${month}`;
   });
-  
+
   const [selectedClosure, setSelectedClosure] = useState<any | null>(null);
 
   // --- MONTHLY SUMMARY STATE ---
-  const [fixedExpenses, setFixedExpenses] = useState<{id: string | number, label: string, amount: number}[]>([]);
-  const [staffSalaries, setStaffSalaries] = useState<{id: string | number, name: string, baseSalary: number}[]>([]);
+  const [fixedExpenses, setFixedExpenses] = useState<{ id: string | number, label: string, amount: number }[]>([]);
+  const [staffSalaries, setStaffSalaries] = useState<{ id: string | number, name: string, baseSalary: number }[]>([]);
   const [isSavingSummary, setIsSavingSummary] = useState(false);
 
   const addFixedExpense = () => setFixedExpenses([...fixedExpenses, { id: Date.now(), label: '', amount: 0 }]);
@@ -49,6 +151,7 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMonth]);
 
   const fetchData = async () => {
@@ -71,7 +174,7 @@ export default function AdminDashboardPage() {
         fetch(`/api/supply?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null),
         fetch(`/api/dashboard/summary?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null)
       ]);
-      
+
       const errors: string[] = [];
 
       if (closuresRes && closuresRes.ok) {
@@ -189,17 +292,30 @@ export default function AdminDashboardPage() {
   const chartData = {
     labels: filteredClosures.map((c) => c.business_date || c.businessDate || c.date),
     datasets: [
-      { label: 'Recette Brute (MAD)', data: filteredClosures.map((c) => Number(c.gross_revenue ?? c.grossRevenue ?? c.total_revenue ?? c.totalRevenue) || 0), borderColor: 'rgb(22, 163, 74)', backgroundColor: 'rgba(22, 163, 74, 0.1)', fill: true, tension: 0.2 },
-      { label: 'Dépenses (MAD)', data: filteredClosures.map((c) => Number(c.total_expenses ?? c.totalExpenses) || 0), borderColor: 'rgb(220, 38, 38)', backgroundColor: 'rgba(220, 38, 38, 0.1)', fill: true, tension: 0.2 },
+      { label: 'Recette Brute (MAD)', data: filteredClosures.map((c) => Number(c.gross_revenue ?? c.grossRevenue ?? c.total_revenue ?? c.totalRevenue) || 0), borderColor: POS, backgroundColor: 'rgba(127,169,138,0.10)', fill: true, tension: 0.35, pointRadius: 2.5, pointBackgroundColor: POS, borderWidth: 2 },
+      { label: 'Dépenses (MAD)', data: filteredClosures.map((c) => Number(c.total_expenses ?? c.totalExpenses) || 0), borderColor: NEG, backgroundColor: 'rgba(177,128,111,0.08)', fill: true, tension: 0.35, pointRadius: 2.5, pointBackgroundColor: NEG, borderWidth: 2 },
     ],
   };
 
+  // --- STRICT CHART FILTER: DINDE, VH, CRISPY, MOZZARELLA (catching all spellings) ---
+  const chartCoreItems = ['dinde', 'vh', 'viande hachée (vh)', 'mozarella', 'mozzarella', 'crispy'];
   const inventoryVolumes: Record<string, number> = {};
+  
   filteredSupplies.forEach(s => {
     (s.items || s.supply_items || []).forEach((i: any) => {
-      const itemName = i.label || i.code;
-      if (itemName) {
-        inventoryVolumes[itemName] = (inventoryVolumes[itemName] || 0) + (Number(i.quantity) || 0);
+      const rawName = i.label || i.code || '';
+      const cleanName = rawName.toLowerCase().trim();
+      
+      const isAllowed = chartCoreItems.some(allowed => cleanName.includes(allowed));
+      
+      if (isAllowed) {
+        let standardizedLabel = i.label || i.code;
+        if (cleanName.includes('dinde')) standardizedLabel = 'Dinde';
+        else if (cleanName.includes('vh') || cleanName.includes('viande hachée')) standardizedLabel = 'Viande Hachée (VH)';
+        else if (cleanName.includes('mozarella') || cleanName.includes('mozzarella')) standardizedLabel = 'Mozzarella';
+        else if (cleanName.includes('crispy')) standardizedLabel = 'Crispy';
+
+        inventoryVolumes[standardizedLabel] = (inventoryVolumes[standardizedLabel] || 0) + (Number(i.quantity) || 0);
       }
     });
   });
@@ -207,7 +323,7 @@ export default function AdminDashboardPage() {
   const inventoryChartData = {
     labels: Object.keys(inventoryVolumes),
     datasets: [
-      { label: 'Volume Acheté (Ce Mois)', data: Object.values(inventoryVolumes), backgroundColor: 'rgba(59, 130, 246, 0.8)', borderRadius: 4 }
+      { label: 'Volume Acheté (Ce Mois)', data: Object.values(inventoryVolumes), backgroundColor: 'rgba(111,147,172,0.55)', hoverBackgroundColor: 'rgba(111,147,172,0.8)', borderRadius: 6, maxBarThickness: 38 }
     ]
   };
 
@@ -229,7 +345,6 @@ export default function AdminDashboardPage() {
   const monthlyNetProfit = totalRevenue - totalOverallExpenses;
   const monthlyExpenseRatio = totalRevenue > 0 ? ((totalOverallExpenses / totalRevenue) * 100).toFixed(1) : '0';
 
-  // --- DYNAMIC PARTNER CALCULATIONS ---
   const tayebAdvances = getStaffAdvance('Tayeb');
   const noureddineShare = monthlyNetProfit / 2;
   const tayebShare = (monthlyNetProfit / 2) - tayebAdvances;
@@ -239,421 +354,591 @@ export default function AdminDashboardPage() {
     ? attempts.filter(a => String(a.closure_date || '').includes(selectedClosureDate))
     : [];
 
+  const monthLabel = (() => {
+    if (!selectedMonth) return '';
+    const [y, m] = selectedMonth.split('-');
+    const d = new Date(Number(y), Number(m) - 1, 1);
+    return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  })();
+
   return (
-    <div className="min-h-screen bg-gray-100 p-6 space-y-8 text-gray-800 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tableau de Bord — Naclos Admin</h1>
-          <p className="text-xs text-gray-500">Suivi financier, analyses mensuelles et audits de clôture</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-gray-50 p-2 border rounded-xl">
-            <label className="text-xs font-bold text-gray-600">Mois :</label>
-            <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="bg-transparent text-sm font-bold outline-none cursor-pointer" />
-          </div>
-          <button onClick={fetchData} className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-500 transition">Rafraîchir</button>
-          <button onClick={handleLogout} className="px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition">Déconnexion</button>
-        </div>
-      </div>
+    <div className="min-h-screen" style={{ background: BG, color: TEXT_PRIMARY }}>
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap');
+        .font-display { font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif; }
+        .font-num { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace; font-variant-numeric: tabular-nums; }
+        body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+        input[type="month"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cursor: pointer; }
+      `}</style>
 
-      {fetchError && (
-        <div className="bg-red-50 border border-red-200 text-red-800 text-sm font-semibold px-4 py-3 rounded-xl">
-          ⚠️ {fetchError}
-          <button onClick={fetchData} className="ml-3 underline font-bold">Réessayer</button>
-        </div>
-      )}
+      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-5">
 
-      {loading ? (
-        <div className="text-center text-sm text-gray-400 py-6">Chargement des données…</div>
-      ) : (
-      <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-1">
-          <span className="text-xs text-gray-400 font-bold uppercase">Total Net Cash (Mois)</span>
-          <div className="text-2xl font-extrabold text-green-700 font-mono">{totalNetCash.toLocaleString()} MAD</div>
-          <p className="text-xs text-gray-500">Recettes - Dépenses - Avances</p>
-        </div>
-        <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-1">
-          <span className="text-xs text-gray-400 font-bold uppercase">Moyenne / Jour</span>
-          <div className="text-2xl font-extrabold text-gray-900 font-mono">{avgDailyRevenue.toFixed(0)} MAD</div>
-          <p className="text-xs text-gray-500">Moy. Dépenses: {avgDailyExpenses.toFixed(0)} MAD</p>
-        </div>
-        <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-1">
-          <span className="text-xs text-gray-400 font-bold uppercase">Ratio Dépenses (Quotidien)</span>
-          <div className="text-2xl font-extrabold text-red-600 font-mono">{expenseRatio}%</div>
-          <p className="text-xs text-gray-500">Total Dépenses: {totalExpenses.toLocaleString()} MAD</p>
-        </div>
-        <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-1">
-          <span className="text-xs text-gray-400 font-bold uppercase">Extrêmes du Mois</span>
-          <div className="text-xs font-bold text-gray-800 space-y-0.5">
-            <div>📈 Max: {maxDay ? `${Number(maxDay.gross_revenue ?? maxDay.grossRevenue ?? maxDay.total_revenue ?? maxDay.totalRevenue).toLocaleString()} MAD` : '-'}</div>
-            <div>📉 Min: {minDay ? `${Number(minDay.gross_revenue ?? minDay.grossRevenue ?? minDay.total_revenue ?? minDay.totalRevenue).toLocaleString()} MAD` : '-'}</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-8">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Évolution des Recettes et Dépenses</h3>
-          {filteredClosures.length > 0 ? (
-            <div className="h-[450px]">
-              <Line 
-                data={chartData} 
-                options={{ 
-                  responsive: true, 
-                  maintainAspectRatio: false,
-                  scales: {
-                    y: {
-                      beginAtZero: true
-                    }
-                  }
-                }} 
-              />
-            </div>
-          ) : (
-            <p className="text-sm text-gray-400 text-center py-12">Aucune donnée disponible.</p>
-          )}
-        </div>
-
-        {/* Volume chart */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border space-y-6">
-          <h3 className="text-lg font-bold text-gray-900">Volume des Achats (Marchandise Salem)</h3>
-          {Object.keys(inventoryVolumes).length > 0 ? (
-            <div className="h-[350px]">
-               <Bar data={inventoryChartData} options={{ responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }} />
-            </div>
-          ) : (
-            <p className="text-sm text-gray-400 text-center py-12">Aucun achat enregistré ce mois par Salem.</p>
-          )}
-
-          {/* DETAILED DAILY PURCHASES TABLE (SCROLLABLE) */}
-          <div className="border-t pt-6 space-y-4">
-            <h4 className="text-base font-bold text-gray-800">Détails Journaliers des Achats ({filteredSupplies.length})</h4>
-            {filteredSupplies.length > 0 ? (
-              <div className="overflow-auto max-h-[280px] relative rounded-b-xl border border-gray-100">
-                <table className="w-full text-left text-sm">
-                  <thead className="sticky top-0 bg-white z-10 shadow-sm outline outline-1 outline-gray-200">
-                    <tr className="text-xs text-gray-400 uppercase">
-                      <th className="py-3 px-2 bg-white">Date d'Achat</th>
-                      <th className="py-3 px-2 bg-white">Acheteur</th>
-                      <th className="py-3 px-2 bg-white">Articles & Quantités Achetées</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {filteredSupplies.map((s, idx) => {
-                      const sDate = s.business_date || s.businessDate || s.date;
-                      const buyer = s.buyer_name || s.buyerName || 'Salem';
-                      const itemsList = s.items || s.supply_items || [];
-
-                      return (
-                        <tr key={s.id || idx} className="hover:bg-gray-50">
-                          <td className="py-3 px-2 font-bold">{sDate}</td>
-                          <td className="py-3 px-2 font-semibold text-gray-600">{buyer}</td>
-                          <td className="py-3 px-2">
-                            <div className="flex flex-wrap gap-2">
-                              {itemsList.map((item: any, i: number) => (
-                                <span key={i} className="bg-blue-50 text-blue-800 text-xs px-2.5 py-1 rounded-lg border border-blue-100 font-bold">
-                                  {item.label || item.code}: <span className="font-mono text-blue-900">{item.quantity} {item.unit || ''}</span>
-                                </span>
-                              ))}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400 italic text-center py-4">Aucune saisie d'achat détaillée pour ce mois.</p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border space-y-4">
-          <h3 className="text-lg font-bold text-gray-900">Clôtures Journalières ({filteredClosures.length})</h3>
-          {/* CLOSURES TABLE (SCROLLABLE) */}
-          <div className="overflow-auto max-h-[280px] relative rounded-b-xl border border-gray-100">
-            <table className="w-full text-left text-sm">
-              <thead className="sticky top-0 bg-white z-10 shadow-sm outline outline-1 outline-gray-200">
-                <tr className="text-xs text-gray-400 uppercase">
-                  <th className="py-3 px-2 bg-white">Date Prévue</th>
-                  <th className="py-3 px-2 bg-white">Heure d'envoi</th>
-                  <th className="py-3 px-2 bg-white">Statut</th>
-                  <th className="py-3 px-2 bg-white text-right">Recette Brute</th>
-                  <th className="py-3 px-2 bg-white text-right">Cash Net</th>
-                  <th className="py-3 px-2 bg-white text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {filteredClosures.map((c) => {
-                  const bDate = c.business_date || c.businessDate || c.date;
-                  const dayAttempts = attempts.filter(a => String(a.closure_date || '').includes(bDate));
-                  const realTime = new Date(c.submitted_at || c.created_at || new Date()).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
-                  const grossRev = Number(c.gross_revenue ?? c.grossRevenue ?? c.total_revenue ?? c.totalRevenue) || 0;
-                  const netCsh = Number(c.net_cash ?? c.netCash) || 0;
-
-                  return (
-                    <tr key={c.id || bDate} className="hover:bg-gray-50">
-                      <td className="py-3 px-2 font-bold">{bDate}</td>
-                      <td className="py-3 px-2 text-xs text-blue-600 font-mono">{realTime}</td>
-                      <td className="py-3 px-2">
-                        {dayAttempts.length > 0 ? (
-                          <span className="bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs font-bold border border-amber-200">
-                            ⚠️ Modifiée ({dayAttempts.length} version(s))
-                          </span>
-                        ) : (
-                          <span className="text-gray-500 text-xs">Standard</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-2 text-right font-mono font-bold text-green-700">{grossRev.toLocaleString()} MAD</td>
-                      <td className="py-3 px-2 text-right font-mono font-bold">{netCsh.toLocaleString()} MAD</td>
-                      <td className="py-3 px-2 text-center">
-                        <button onClick={() => setSelectedClosure(c)} className="px-3 py-1.5 bg-gray-900 text-white text-xs font-bold rounded-lg hover:bg-gray-800">Voir Détails</button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl shadow-sm border space-y-4">
-          <h3 className="text-lg font-bold text-gray-900">Avances (Personnel)</h3>
-          <div className="space-y-3">
-            {Object.keys(staffAdvancesMap).length > 0 ? (
-              Object.entries(staffAdvancesMap).map(([name, totalAmt]) => (
-                <div key={name} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border">
-                  <span className="font-bold text-sm text-gray-800">{name}</span>
-                  <span className="font-mono font-extrabold text-amber-600">{totalAmt.toLocaleString()} MAD</span>
-                </div>
-              ))
-            ) : (
-              <p className="text-xs text-gray-400 italic text-center py-6">Aucune avance enregistrée ce mois.</p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ========================================= */}
-      {/* REDESIGNED SECTION: MONTHLY SUMMARY & PAYROLL */}
-      {/* ========================================= */}
-      <div className="mt-12 border-t-2 border-gray-200 pt-10 space-y-8">
-        <div>
-          <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Clôture et Bilan Mensuel</h2>
-          <p className="text-sm text-gray-500">Gérez votre personnel, vos charges fixes et consultez la santé financière globale du mois.</p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* Left Column: Calculators (Takes 7 cols) */}
-          <div className="lg:col-span-7 space-y-6">
-            
-            {/* Staff Salary Calculator */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-base font-bold text-gray-900">Calcul des Salaires & Avances</h3>
-                <button onClick={addStaff} className="text-xs bg-blue-50 text-blue-600 font-bold px-3 py-2 rounded-xl hover:bg-blue-100 transition">+ Ajouter Personnel</button>
-              </div>
-              {staffSalaries.length === 0 && <p className="text-xs text-gray-400 italic">Ajoutez votre personnel pour calculer les salaires nets après déduction des avances.</p>}
-              
-              <div className="space-y-3">
-                {staffSalaries.map(staff => {
-                  const adv = getStaffAdvance(staff.name);
-                  const net = (Number(staff.baseSalary) || 0) - adv;
-                  return (
-                    <div key={staff.id} className="p-4 bg-gray-50 rounded-xl border space-y-3">
-                      <div className="flex gap-3 items-center">
-                        <input type="text" placeholder="Nom complet" value={staff.name} onChange={e => updateStaff(staff.id, 'name', e.target.value)} className="flex-1 p-2.5 bg-white border rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-black" />
-                        <input type="number" placeholder="Salaire base (MAD)" value={staff.baseSalary === 0 ? '' : staff.baseSalary} onChange={e => updateStaff(staff.id, 'baseSalary', e.target.value)} className="w-36 p-2.5 bg-white border rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-black" />
-                        <button onClick={() => removeStaff(staff.id)} className="text-red-500 hover:bg-red-100 p-2.5 rounded-xl font-bold transition">✕</button>
-                      </div>
-                      {staff.name && (
-                        <div className="flex justify-between items-center text-xs px-3 py-2 bg-white rounded-xl border">
-                          <span className="text-gray-500">Avances prises: <span className="font-bold text-red-500">-{adv} MAD</span></span>
-                          <span className="font-bold text-gray-900">Reste à payer: <span className={net < 0 ? 'text-red-600 font-extrabold' : 'text-green-600 font-extrabold'}>{net} MAD</span></span>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Fixed Expenses Tracker */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-base font-bold text-gray-900">Dépenses Fixes (Loyer, Électricité...)</h3>
-                <button onClick={addFixedExpense} className="text-xs bg-blue-50 text-blue-600 font-bold px-3 py-2 rounded-xl hover:bg-blue-100 transition">+ Ajouter Charge</button>
-              </div>
-              {fixedExpenses.length === 0 && <p className="text-xs text-gray-400 italic">Ajoutez les charges fixes du mois pour le bilan final.</p>}
-              
-              <div className="space-y-3">
-                {fixedExpenses.map(exp => (
-                  <div key={exp.id} className="flex gap-3 items-center">
-                    <input type="text" placeholder="Description de la charge" value={exp.label} onChange={e => updateFixedExpense(exp.id, 'label', e.target.value)} className="flex-1 p-2.5 bg-white border rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-black" />
-                    <input type="number" placeholder="Montant (MAD)" value={exp.amount === 0 ? '' : exp.amount} onChange={e => updateFixedExpense(exp.id, 'amount', e.target.value)} className="w-36 p-2.5 bg-white border rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-black" />
-                    <button onClick={() => removeFixedExpense(exp.id)} className="text-red-500 hover:bg-red-100 p-2.5 rounded-xl font-bold transition">✕</button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          </div>
-
-          {/* Right Column: Premium Global Summary Card (Takes 5 cols) */}
-          <div className="lg:col-span-5 bg-gradient-to-br from-slate-950 via-gray-900 to-slate-900 p-8 rounded-3xl shadow-2xl text-white border border-gray-800 flex flex-col justify-between space-y-8">
-            <div className="space-y-6">
-              <div className="flex justify-between items-center border-b border-gray-800 pb-4">
-                <h3 className="text-xl font-extrabold text-blue-400 tracking-wide">Bilan Global Mensuel</h3>
-                <span className="text-xs font-mono bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20">{selectedMonth}</span>
-              </div>
-              
-              <div className="flex justify-between items-center bg-white/5 p-3.5 rounded-2xl border border-white/5">
-                <span className="text-gray-300 text-sm font-medium">Recette Mensuelle (Brute)</span>
-                <span className="font-mono text-base font-bold text-emerald-400">+{totalRevenue.toLocaleString()} MAD</span>
-              </div>
-              
-              <div className="space-y-3 pt-2">
-                <div className="flex justify-between items-center text-sm px-1">
-                  <span className="text-gray-400">Achats & Dépenses Journalières</span>
-                  <span className="font-mono font-semibold text-rose-400">-{totalExpenses.toLocaleString()} MAD</span>
-                </div>
-                <div className="flex justify-between items-center text-sm px-1">
-                  <span className="text-gray-400">Masse Salariale (Base)</span>
-                  <span className="font-mono font-semibold text-rose-400">-{totalBaseSalaries.toLocaleString()} MAD</span>
-                </div>
-                <div className="flex justify-between items-center text-sm px-1">
-                  <span className="text-gray-400">Dépenses Fixes Mensuelles</span>
-                  <span className="font-mono font-semibold text-rose-400">-{totalFixedExpenses.toLocaleString()} MAD</span>
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center pt-4 border-t border-gray-800 px-1">
-                <span className="text-gray-300 text-sm font-bold">Total des Charges Globales</span>
-                <span className="font-mono text-base font-extrabold text-rose-500">-{totalOverallExpenses.toLocaleString()} MAD</span>
-              </div>
-              
-              <div className="flex justify-between items-center bg-black/40 p-3.5 rounded-2xl border border-white/5">
-                <span className="text-gray-400 text-sm">Ratio Global Dépenses / Recette</span>
-                <span className="font-mono font-bold text-amber-400 text-base">{monthlyExpenseRatio}%</span>
-              </div>
-            </div>
-
-            <div className="space-y-4 pt-4 border-t border-gray-800">
-              <div className="bg-black/60 p-6 rounded-2xl border border-blue-500/30 text-center shadow-inner relative overflow-hidden">
-                <div className="absolute inset-0 bg-blue-500/5 pointer-events-none"></div>
-                <span className="block text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Bénéfice Net Mensuel Réel</span>
-                <span className={`text-4xl font-black font-mono tracking-tight ${monthlyNetProfit >= 0 ? 'text-emerald-400' : 'text-rose-500'}`}>
-                  {monthlyNetProfit > 0 ? '+' : ''}{monthlyNetProfit.toLocaleString()} MAD
-                </span>
-              </div>
-
-              <button 
-                onClick={saveMonthlySummary}
-                disabled={isSavingSummary}
-                className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 transition text-white font-bold rounded-2xl shadow-xl shadow-blue-600/20 disabled:opacity-50 text-sm tracking-wide"
+        {/* ============================= HEADER + TAB NAV ============================= */}
+        <div className="rounded-[24px] overflow-hidden" style={{ background: SURFACE, border: `1px solid ${HAIRLINE}` }}>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-6 pt-5 pb-4">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center font-display font-bold text-base"
+                style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE_STRONG}`, color: TEXT_PRIMARY }}
               >
-                {isSavingSummary ? 'Sauvegarde en cours...' : '💾 Sauvegarder le Bilan Mensuel'}
+                N
+              </div>
+              <div>
+                <h1 className="font-display text-lg md:text-xl font-semibold tracking-tight" style={{ color: TEXT_PRIMARY }}>
+                  Naclos <span style={{ color: TEXT_FAINT }} className="font-medium">— Admin</span>
+                </h1>
+                <p className="text-[11px]" style={{ color: TEXT_FAINT }}>Suivi financier · analyses mensuelles · audits de clôture</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE}` }}>
+                <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: TEXT_FAINT }}>Mois</span>
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="bg-transparent text-sm font-semibold outline-none cursor-pointer [color-scheme:dark]"
+                  style={{ color: TEXT_PRIMARY }}
+                />
+              </div>
+              <button
+                onClick={fetchData}
+                className="flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-bold rounded-xl transition hover:opacity-80"
+                style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE}`, color: TEXT_PRIMARY }}
+              >
+                <IconRefresh className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} /> Rafraîchir
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-bold rounded-xl transition hover:opacity-80"
+                style={{ background: ACCENT.clay.soft, border: `1px solid ${ACCENT.clay.hex}33`, color: ACCENT.clay.hex }}
+              >
+                <IconLogout className="w-3.5 h-3.5" /> Déconnexion
               </button>
             </div>
           </div>
 
-        </div>
-      </div>
-
-      {/* ========================================= */}
-      {/* NEW PARTNER SPLIT PANEL (50% / 50%)        */}
-      {/* ========================================= */}
-      <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-xl border border-slate-800 mt-8">
-        <h3 className="text-lg font-bold mb-4 flex items-center justify-between">
-          <span>Partage des Parts (50% / 50%)</span>
-          <span className="text-xs bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/30">Mr. Noureddine & Tayeb</span>
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Part de Mr. Noureddine */}
-          <div className="bg-slate-800/60 p-5 rounded-2xl border border-slate-700/50 space-y-1">
-            <p className="text-xs uppercase tracking-wider text-slate-400 font-bold">Part de Mr. Noureddine (50%)</p>
-            <p className="text-3xl font-extrabold text-emerald-400 font-mono mt-1">
-              {noureddineShare.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
-            </p>
-            <p className="text-xs text-slate-500">50% du bénéfice net réel du mois</p>
-          </div>
-
-          {/* Part de Tayeb (Net / 2 minus his advances) */}
-          <div className="bg-slate-800/60 p-5 rounded-2xl border border-slate-700/50 space-y-1">
-            <p className="text-xs uppercase tracking-wider text-slate-400 font-bold">Part de Tayeb (50% - Avances)</p>
-            <div className="flex items-baseline justify-between mt-1">
-              <p className="text-3xl font-extrabold text-emerald-400 font-mono">
-                {tayebShare.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
-              </p>
-              <span className="text-xs font-semibold text-rose-400 bg-rose-500/10 px-2.5 py-1 rounded-lg border border-rose-500/20">
-                Avances prises: -{tayebAdvances} MAD
-              </span>
+          <div className="px-4 pb-4">
+            <div className="flex flex-wrap gap-1.5 p-1.5 rounded-2xl" style={{ background: 'rgba(0,0,0,0.25)', border: `1px solid ${HAIRLINE}` }}>
+              {TABS.map((tab) => {
+                const isActive = activeTab === tab.id;
+                const a = ACCENT[tab.accent];
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                    style={
+                      isActive
+                        ? { background: SURFACE_2, color: TEXT_PRIMARY, border: `1px solid ${a.hex}40` }
+                        : { background: 'transparent', color: TEXT_FAINT, border: '1px solid transparent' }
+                    }
+                  >
+                    <Icon className="w-4 h-4" style={{ color: isActive ? a.hex : TEXT_FAINT }} />
+                    {tab.label}
+                  </button>
+                );
+              })}
             </div>
-            <p className="text-xs text-slate-500">Déduction automatique de ses avances de la table staff_advances</p>
           </div>
         </div>
-      </div>
-      {/* ========================================= */}
 
-      </>
-      )}
+        {fetchError && (
+          <div
+            className="text-sm font-semibold px-4 py-3 rounded-2xl flex items-center justify-between"
+            style={{ background: ACCENT.clay.soft, border: `1px solid ${ACCENT.clay.hex}33`, color: '#D8B3A6' }}
+          >
+            <span>⚠ {fetchError}</span>
+            <button onClick={fetchData} className="ml-3 underline font-bold shrink-0">Réessayer</button>
+          </div>
+        )}
 
-      {selectedClosure && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-          <div className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl shadow-2xl space-y-6">
-            <div className="flex justify-between items-center border-b pb-4">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Détails de Clôture — {selectedClosureDate}</h2>
+        {loading ? (
+          <div className="text-center text-sm py-24 font-medium" style={{ color: TEXT_FAINT }}>Chargement des données…</div>
+        ) : (
+          <>
+            {/* ============================= TAB: CLÔTURES DU JOUR ============================= */}
+            {activeTab === 'closures' && (
+              <div className="space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Card className="space-y-1">
+                    <span className="text-xs font-bold uppercase tracking-wide" style={{ color: TEXT_FAINT }}>Total Net Cash ({monthLabel})</span>
+                    <div className="text-2xl font-bold font-num" style={{ color: POS }}>{totalNetCash.toLocaleString()} MAD</div>
+                    <p className="text-xs" style={{ color: TEXT_FAINT }}>Recettes − Dépenses − Avances</p>
+                  </Card>
+                  <Card className="space-y-1">
+                    <span className="text-xs font-bold uppercase tracking-wide" style={{ color: TEXT_FAINT }}>Moyenne / Jour</span>
+                    <div className="text-2xl font-bold font-num" style={{ color: TEXT_PRIMARY }}>{avgDailyRevenue.toFixed(0)} MAD</div>
+                    <p className="text-xs" style={{ color: TEXT_FAINT }}>Moy. dépenses : {avgDailyExpenses.toFixed(0)} MAD</p>
+                  </Card>
+                  <Card className="space-y-1">
+                    <span className="text-xs font-bold uppercase tracking-wide" style={{ color: TEXT_FAINT }}>Ratio Dépenses (Quotidien)</span>
+                    <div className="text-2xl font-bold font-num" style={{ color: NEG }}>{expenseRatio}%</div>
+                    <p className="text-xs" style={{ color: TEXT_FAINT }}>Total dépenses : {totalExpenses.toLocaleString()} MAD</p>
+                  </Card>
+                  <Card className="space-y-1">
+                    <span className="text-xs font-bold uppercase tracking-wide" style={{ color: TEXT_FAINT }}>Extrêmes du Mois</span>
+                    <div className="text-xs font-semibold space-y-0.5 pt-0.5" style={{ color: TEXT_PRIMARY }}>
+                      <div>Max : {maxDay ? `${Number(maxDay.gross_revenue ?? maxDay.grossRevenue ?? maxDay.total_revenue ?? maxDay.totalRevenue).toLocaleString()} MAD` : '-'}</div>
+                      <div>Min : {minDay ? `${Number(minDay.gross_revenue ?? minDay.grossRevenue ?? minDay.total_revenue ?? minDay.totalRevenue).toLocaleString()} MAD` : '-'}</div>
+                    </div>
+                  </Card>
+                </div>
+
+                <Card>
+                  <SectionEyebrow accent="sage">Évolution</SectionEyebrow>
+                  <h3 className="text-base font-semibold mb-4 font-display" style={{ color: TEXT_PRIMARY }}>Recettes et Dépenses par Jour</h3>
+                  {filteredClosures.length > 0 ? (
+                    <div className="h-[360px]">
+                      <Line
+                        data={chartData}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: { labels: { color: chartTextColor, font: { weight: 'bold', size: 11 }, boxWidth: 10, usePointStyle: true } },
+                            tooltip: { backgroundColor: SURFACE_2, borderColor: HAIRLINE_STRONG, borderWidth: 1, titleColor: TEXT_PRIMARY, bodyColor: TEXT_MUTED, padding: 10, cornerRadius: 8 },
+                          },
+                          scales: {
+                            y: { beginAtZero: true, grid: { color: chartGridColor }, ticks: { color: chartTextColor, font: { size: 10 } } },
+                            x: { grid: { display: false }, ticks: { color: chartTextColor, font: { size: 10 } } },
+                          },
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-center py-12" style={{ color: TEXT_FAINT }}>Aucune donnée disponible.</p>
+                  )}
+                </Card>
+
+                <Card className="space-y-4">
+                  <SectionEyebrow accent="sage">Journal</SectionEyebrow>
+                  <h3 className="text-base font-semibold font-display" style={{ color: TEXT_PRIMARY }}>Clôtures Journalières ({filteredClosures.length})</h3>
+                  <div className="overflow-auto max-h-[360px] rounded-xl" style={{ border: `1px solid ${HAIRLINE}` }}>
+                    <table className="w-full text-left text-sm">
+                      <thead className="sticky top-0 z-10" style={{ background: SURFACE }}>
+                        <tr className="text-[11px] uppercase tracking-wide" style={{ color: TEXT_FAINT }}>
+                          <th className="py-3 px-3 font-bold">Date Prévue</th>
+                          <th className="py-3 px-3 font-bold">Heure d'envoi</th>
+                          <th className="py-3 px-3 font-bold">Statut</th>
+                          <th className="py-3 px-3 font-bold text-right">Recette Brute</th>
+                          <th className="py-3 px-3 font-bold text-right">Cash Net</th>
+                          <th className="py-3 px-3 font-bold text-center">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredClosures.map((c) => {
+                          const bDate = c.business_date || c.businessDate || c.date;
+                          const dayAttempts = attempts.filter(a => String(a.closure_date || '').includes(bDate));
+                          const realTime = new Date(c.submitted_at || c.created_at || new Date()).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+                          const grossRev = Number(c.gross_revenue ?? c.grossRevenue ?? c.total_revenue ?? c.totalRevenue) || 0;
+                          const netCsh = Number(c.net_cash ?? c.netCash) || 0;
+
+                          return (
+                            <tr key={c.id || bDate} className="transition-colors hover:bg-white/[0.02]" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
+                              <td className="py-3 px-3 font-semibold" style={{ color: TEXT_PRIMARY }}>{bDate}</td>
+                              <td className="py-3 px-3 text-xs font-num" style={{ color: TEXT_MUTED }}>{realTime}</td>
+                              <td className="py-3 px-3">
+                                {dayAttempts.length > 0 ? (
+                                  <span className="px-2 py-1 rounded-lg text-xs font-bold" style={{ background: ACCENT.gold.soft, color: ACCENT.gold.hex, border: `1px solid ${ACCENT.gold.hex}30` }}>
+                                    Modifiée ({dayAttempts.length})
+                                  </span>
+                                ) : (
+                                  <span className="text-xs font-semibold" style={{ color: TEXT_FAINT }}>Standard</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3 text-right font-num font-bold" style={{ color: POS }}>{grossRev.toLocaleString()} MAD</td>
+                              <td className="py-3 px-3 text-right font-num font-bold" style={{ color: TEXT_PRIMARY }}>{netCsh.toLocaleString()} MAD</td>
+                              <td className="py-3 px-3 text-center">
+                                <button
+                                  onClick={() => setSelectedClosure(c)}
+                                  className="px-3 py-1.5 text-xs font-bold rounded-lg transition hover:opacity-80"
+                                  style={{ background: SURFACE_2, color: TEXT_PRIMARY, border: `1px solid ${HAIRLINE_STRONG}` }}
+                                >
+                                  Voir Détails
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
               </div>
-              <button onClick={() => setSelectedClosure(null)} className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full font-bold text-gray-600">✕</button>
+            )}
+
+            {/* ============================= TAB: ACHATS & STOCK ============================= */}
+            {activeTab === 'supplies' && (
+              <div className="space-y-5">
+                <Card className="space-y-5">
+                  <div>
+                    <SectionEyebrow accent="slate">Approvisionnement</SectionEyebrow>
+                    <h3 className="text-base font-semibold font-display" style={{ color: TEXT_PRIMARY }}>Volume des Achats (Dinde, VH, Mozzarella, Crispy)</h3>
+                  </div>
+                  {Object.keys(inventoryVolumes).length > 0 ? (
+                    <div className="h-[320px]">
+                      <Bar
+                        data={inventoryChartData}
+                        options={{
+                          responsive: true, maintainAspectRatio: false,
+                          plugins: {
+                            legend: { display: false },
+                            tooltip: { backgroundColor: SURFACE_2, borderColor: HAIRLINE_STRONG, borderWidth: 1, titleColor: TEXT_PRIMARY, bodyColor: TEXT_MUTED, padding: 10, cornerRadius: 8 },
+                          },
+                          scales: {
+                            y: { beginAtZero: true, grid: { color: chartGridColor }, ticks: { color: chartTextColor, font: { size: 10 } } },
+                            x: { grid: { display: false }, ticks: { color: chartTextColor, font: { size: 10 } } },
+                          },
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-center py-12" style={{ color: TEXT_FAINT }}>Aucun achat pour ces articles ce mois.</p>
+                  )}
+                </Card>
+
+                <Card className="space-y-4">
+                  <SectionEyebrow accent="slate">Détail Journalier</SectionEyebrow>
+                  <h4 className="text-base font-semibold font-display" style={{ color: TEXT_PRIMARY }}>Achats ({filteredSupplies.length})</h4>
+                  {filteredSupplies.length > 0 ? (
+                    <div className="overflow-auto max-h-[420px] rounded-xl" style={{ border: `1px solid ${HAIRLINE}` }}>
+                      <table className="w-full text-left text-sm">
+                        <thead className="sticky top-0 z-10" style={{ background: SURFACE }}>
+                          <tr className="text-[11px] uppercase tracking-wide" style={{ color: TEXT_FAINT }}>
+                            <th className="py-3 px-3 font-bold">Date d'Achat</th>
+                            <th className="py-3 px-3 font-bold">Acheteur</th>
+                            <th className="py-3 px-3 font-bold">Articles & Quantités (Complet)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredSupplies.map((s, idx) => {
+                            const sDate = s.business_date || s.businessDate || s.date;
+                            const buyer = s.buyer_name || s.buyerName || 'Salem';
+                            const itemsList = s.items || s.supply_items || [];
+
+                            return (
+                              <tr key={s.id || idx} className="transition-colors hover:bg-white/[0.02]" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
+                                <td className="py-3 px-3 font-semibold" style={{ color: TEXT_PRIMARY }}>{sDate}</td>
+                                <td className="py-3 px-3 font-medium" style={{ color: TEXT_MUTED }}>{buyer}</td>
+                                <td className="py-3 px-3">
+                                  <div className="flex flex-wrap gap-2">
+                                    {itemsList.map((item: any, i: number) => (
+                                      <span
+                                        key={i}
+                                        className="text-xs px-2.5 py-1 rounded-lg font-bold"
+                                        style={{ background: ACCENT.slate.soft, color: ACCENT.slate.hex, border: `1px solid ${ACCENT.slate.hex}30` }}
+                                      >
+                                        {item.label || item.code}: <span className="font-num">{item.quantity} {item.unit || ''}</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-xs italic text-center py-4" style={{ color: TEXT_FAINT }}>Aucune saisie d'achat détaillée pour ce mois.</p>
+                  )}
+                </Card>
+              </div>
+            )}
+
+            {/* ============================= TAB: BILAN MENSUEL ============================= */}
+            {activeTab === 'summary' && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                <div className="lg:col-span-7 space-y-5">
+                  <Card className="space-y-4">
+                    <SectionEyebrow accent="plum">Charges</SectionEyebrow>
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-base font-semibold font-display" style={{ color: TEXT_PRIMARY }}>Dépenses Fixes (Loyer, Électricité...)</h3>
+                      <button
+                        onClick={addFixedExpense}
+                        className="text-xs font-bold px-3 py-2 rounded-xl transition hover:opacity-80"
+                        style={{ background: ACCENT.plum.soft, color: ACCENT.plum.hex, border: `1px solid ${ACCENT.plum.hex}30` }}
+                      >
+                        + Ajouter Charge
+                      </button>
+                    </div>
+                    {fixedExpenses.length === 0 && <p className="text-xs italic" style={{ color: TEXT_FAINT }}>Ajoutez les charges fixes du mois pour le bilan final.</p>}
+                    <div className="space-y-3">
+                      {fixedExpenses.map(exp => (
+                        <div key={exp.id} className="flex gap-3 items-center">
+                          <input
+                            type="text" placeholder="Description de la charge" value={exp.label}
+                            onChange={e => updateFixedExpense(exp.id, 'label', e.target.value)}
+                            className="flex-1 p-2.5 rounded-xl text-sm font-semibold outline-none"
+                            style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE_STRONG}`, color: TEXT_PRIMARY }}
+                          />
+                          <input
+                            type="number" placeholder="Montant (MAD)" value={exp.amount === 0 ? '' : exp.amount}
+                            onChange={e => updateFixedExpense(exp.id, 'amount', e.target.value)}
+                            className="w-36 p-2.5 rounded-xl text-sm font-semibold font-num outline-none"
+                            style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE_STRONG}`, color: TEXT_PRIMARY }}
+                          />
+                          <button onClick={() => removeFixedExpense(exp.id)} className="p-2.5 rounded-xl font-bold transition hover:opacity-70" style={{ color: ACCENT.clay.hex }}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+
+                  <Card>
+                    <SectionEyebrow accent="plum">Aperçu Rapide</SectionEyebrow>
+                    <h3 className="text-base font-semibold font-display mb-3" style={{ color: TEXT_PRIMARY }}>Composition des Charges Globales</h3>
+                    <div className="space-y-3">
+                      {[
+                        { label: 'Achats & dépenses journalières', value: totalExpenses, color: ACCENT.clay.hex },
+                        { label: 'Masse salariale (base)', value: totalBaseSalaries, color: ACCENT.gold.hex },
+                        { label: 'Dépenses fixes mensuelles', value: totalFixedExpenses, color: ACCENT.plum.hex },
+                      ].map((row) => {
+                        const pct = totalOverallExpenses > 0 ? (row.value / totalOverallExpenses) * 100 : 0;
+                        return (
+                          <div key={row.label} className="space-y-1">
+                            <div className="flex justify-between text-xs font-semibold" style={{ color: TEXT_MUTED }}>
+                              <span>{row.label}</span>
+                              <span className="font-num">{row.value.toLocaleString()} MAD</span>
+                            </div>
+                            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: SURFACE_2 }}>
+                              <div className="h-full rounded-full" style={{ width: `${pct}%`, background: row.color }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Card>
+                </div>
+
+                <div
+                  className="lg:col-span-5 p-7 rounded-3xl flex flex-col justify-between space-y-7"
+                  style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE_STRONG}` }}
+                >
+                  <div className="space-y-5">
+                    <div className="flex justify-between items-center pb-4" style={{ borderBottom: `1px solid ${HAIRLINE}` }}>
+                      <h3 className="text-base font-semibold tracking-wide font-display" style={{ color: ACCENT.plum.hex }}>Bilan Global Mensuel</h3>
+                      <span className="text-xs font-num px-3 py-1 rounded-full capitalize" style={{ background: ACCENT.plum.soft, color: ACCENT.plum.hex, border: `1px solid ${ACCENT.plum.hex}30` }}>{monthLabel}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center p-3.5 rounded-2xl" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                      <span className="text-sm font-medium" style={{ color: TEXT_MUTED }}>Recette Mensuelle (Brute)</span>
+                      <span className="font-num text-base font-bold" style={{ color: POS }}>+{totalRevenue.toLocaleString()} MAD</span>
+                    </div>
+
+                    <div className="space-y-2.5 pt-1">
+                      <div className="flex justify-between items-center text-sm px-1">
+                        <span style={{ color: TEXT_FAINT }}>Achats & Dépenses Journalières</span>
+                        <span className="font-num font-semibold" style={{ color: NEG }}>-{totalExpenses.toLocaleString()} MAD</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm px-1">
+                        <span style={{ color: TEXT_FAINT }}>Masse Salariale (Base)</span>
+                        <span className="font-num font-semibold" style={{ color: NEG }}>-{totalBaseSalaries.toLocaleString()} MAD</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm px-1">
+                        <span style={{ color: TEXT_FAINT }}>Dépenses Fixes Mensuelles</span>
+                        <span className="font-num font-semibold" style={{ color: NEG }}>-{totalFixedExpenses.toLocaleString()} MAD</span>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center pt-4 px-1" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
+                      <span className="text-sm font-bold" style={{ color: TEXT_MUTED }}>Total des Charges Globales</span>
+                      <span className="font-num text-base font-bold" style={{ color: NEG }}>-{totalOverallExpenses.toLocaleString()} MAD</span>
+                    </div>
+
+                    <div className="flex justify-between items-center p-3.5 rounded-2xl" style={{ background: 'rgba(0,0,0,0.3)' }}>
+                      <span className="text-sm" style={{ color: TEXT_FAINT }}>Ratio Global Dépenses / Recette</span>
+                      <span className="font-num font-bold text-base" style={{ color: ACCENT.gold.hex }}>{monthlyExpenseRatio}%</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 pt-4" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
+                    <div className="p-6 rounded-2xl text-center" style={{ background: 'rgba(0,0,0,0.35)', border: `1px solid ${ACCENT.plum.hex}25` }}>
+                      <span className="block text-xs font-bold uppercase tracking-wider mb-1" style={{ color: TEXT_FAINT }}>Bénéfice Net Mensuel Réel</span>
+                      <span className="text-4xl font-bold font-num tracking-tight" style={{ color: monthlyNetProfit >= 0 ? POS : NEG }}>
+                        {monthlyNetProfit > 0 ? '+' : ''}{monthlyNetProfit.toLocaleString()} MAD
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={saveMonthlySummary}
+                      disabled={isSavingSummary}
+                      className="w-full py-3.5 font-bold rounded-2xl transition disabled:opacity-50 text-sm tracking-wide hover:opacity-90"
+                      style={{ background: ACCENT.plum.hex, color: '#12121a' }}
+                    >
+                      {isSavingSummary ? 'Sauvegarde en cours...' : 'Sauvegarder le Bilan Mensuel'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ============================= TAB: SALAIRES & AVANCES ============================= */}
+            {activeTab === 'salaries' && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+                <Card className="lg:col-span-2 space-y-4">
+                  <SectionEyebrow accent="gold">Personnel</SectionEyebrow>
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-base font-semibold font-display" style={{ color: TEXT_PRIMARY }}>Calcul des Salaires & Avances</h3>
+                    <button
+                      onClick={addStaff}
+                      className="text-xs font-bold px-3 py-2 rounded-xl transition hover:opacity-80"
+                      style={{ background: ACCENT.gold.soft, color: ACCENT.gold.hex, border: `1px solid ${ACCENT.gold.hex}30` }}
+                    >
+                      + Ajouter Personnel
+                    </button>
+                  </div>
+                  {staffSalaries.length === 0 && <p className="text-xs italic" style={{ color: TEXT_FAINT }}>Ajoutez votre personnel pour calculer les salaires nets après déduction des avances.</p>}
+
+                  <div className="space-y-3">
+                    {staffSalaries.map(staff => {
+                      const adv = getStaffAdvance(staff.name);
+                      const net = (Number(staff.baseSalary) || 0) - adv;
+                      return (
+                        <div key={staff.id} className="p-4 rounded-xl space-y-3" style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE}` }}>
+                          <div className="flex gap-3 items-center">
+                            <input
+                              type="text" placeholder="Nom complet" value={staff.name}
+                              onChange={e => updateStaff(staff.id, 'name', e.target.value)}
+                              className="flex-1 p-2.5 rounded-xl text-sm font-semibold outline-none"
+                              style={{ background: SURFACE, border: `1px solid ${HAIRLINE_STRONG}`, color: TEXT_PRIMARY }}
+                            />
+                            <input
+                              type="number" placeholder="Salaire base (MAD)" value={staff.baseSalary === 0 ? '' : staff.baseSalary}
+                              onChange={e => updateStaff(staff.id, 'baseSalary', e.target.value)}
+                              className="w-36 p-2.5 rounded-xl text-sm font-semibold font-num outline-none"
+                              style={{ background: SURFACE, border: `1px solid ${HAIRLINE_STRONG}`, color: TEXT_PRIMARY }}
+                            />
+                            <button onClick={() => removeStaff(staff.id)} className="p-2.5 rounded-xl font-bold transition hover:opacity-70" style={{ color: ACCENT.clay.hex }}>✕</button>
+                          </div>
+                          {staff.name && (
+                            <div className="flex justify-between items-center text-xs px-3 py-2 rounded-xl" style={{ background: SURFACE, border: `1px solid ${HAIRLINE}` }}>
+                              <span style={{ color: TEXT_FAINT }}>Avances prises : <span className="font-bold font-num" style={{ color: NEG }}>-{adv} MAD</span></span>
+                              <span className="font-bold" style={{ color: TEXT_MUTED }}>Reste à payer : <span className="font-num font-bold" style={{ color: net < 0 ? NEG : POS }}>{net} MAD</span></span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
+
+                <Card className="space-y-4">
+                  <SectionEyebrow accent="gold">Ce Mois</SectionEyebrow>
+                  <h3 className="text-base font-semibold font-display" style={{ color: TEXT_PRIMARY }}>Avances (Personnel)</h3>
+                  <div className="space-y-3">
+                    {Object.keys(staffAdvancesMap).length > 0 ? (
+                      Object.entries(staffAdvancesMap).map(([name, totalAmt]) => (
+                        <div key={name} className="flex justify-between items-center p-3 rounded-xl" style={{ background: ACCENT.gold.soft, border: `1px solid ${ACCENT.gold.hex}25` }}>
+                          <span className="font-semibold text-sm" style={{ color: TEXT_PRIMARY }}>{name}</span>
+                          <span className="font-num font-bold" style={{ color: ACCENT.gold.hex }}>{totalAmt.toLocaleString()} MAD</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs italic text-center py-6" style={{ color: TEXT_FAINT }}>Aucune avance enregistrée ce mois.</p>
+                    )}
+                  </div>
+                </Card>
+              </div>
+            )}
+
+            {/* ============================= TAB: PARTAGE DES PARTS ============================= */}
+            {activeTab === 'partnership' && (
+              <Card>
+                <h3 className="text-base font-semibold mb-5 flex items-center justify-between font-display" style={{ color: TEXT_PRIMARY }}>
+                  <span>Partage des Parts (50% / 50%)</span>
+                  <span className="text-xs px-3 py-1 rounded-full" style={{ background: ACCENT.clay.soft, color: ACCENT.clay.hex, border: `1px solid ${ACCENT.clay.hex}30` }}>Mr. Noureddine & Tayeb</span>
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="p-5 rounded-2xl space-y-1" style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE}` }}>
+                    <p className="text-xs uppercase tracking-wider font-bold" style={{ color: TEXT_FAINT }}>Part de Mr. Noureddine (50%)</p>
+                    <p className="text-3xl font-bold font-num mt-1" style={{ color: POS }}>
+                      {noureddineShare.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
+                    </p>
+                    <p className="text-xs" style={{ color: TEXT_FAINT }}>50% du bénéfice net réel du mois</p>
+                  </div>
+
+                  <div className="p-5 rounded-2xl space-y-1" style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE}` }}>
+                    <p className="text-xs uppercase tracking-wider font-bold" style={{ color: TEXT_FAINT }}>Part de Tayeb (50% − Avances)</p>
+                    <div className="flex items-baseline justify-between mt-1 gap-2 flex-wrap">
+                      <p className="text-3xl font-bold font-num" style={{ color: POS }}>
+                        {tayebShare.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
+                      </p>
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-lg font-num" style={{ background: ACCENT.clay.soft, color: ACCENT.clay.hex, border: `1px solid ${ACCENT.clay.hex}30` }}>
+                        Avances : -{tayebAdvances} MAD
+                      </span>
+                    </div>
+                    <p className="text-xs" style={{ color: TEXT_FAINT }}>Déduction automatique de ses avances (staff_advances)</p>
+                  </div>
+                </div>
+
+                <div className="mt-5 pt-5 flex items-center justify-between text-xs" style={{ borderTop: `1px solid ${HAIRLINE}`, color: TEXT_FAINT }}>
+                  <span>Basé sur le bénéfice net mensuel réel</span>
+                  <span className="font-num font-bold" style={{ color: TEXT_MUTED }}>{monthlyNetProfit.toLocaleString()} MAD</span>
+                </div>
+              </Card>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* ============================= CLOSURE DETAILS MODAL ============================= */}
+      {selectedClosure && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl space-y-6" style={{ background: SURFACE, border: `1px solid ${HAIRLINE_STRONG}` }}>
+            <div className="flex justify-between items-center pb-4" style={{ borderBottom: `1px solid ${HAIRLINE}` }}>
+              <h2 className="text-lg font-semibold font-display" style={{ color: TEXT_PRIMARY }}>Détails de Clôture — {selectedClosureDate}</h2>
+              <button
+                onClick={() => setSelectedClosure(null)}
+                className="w-8 h-8 rounded-full font-bold transition hover:opacity-80"
+                style={{ background: SURFACE_2, color: TEXT_MUTED }}
+              >
+                ✕
+              </button>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 bg-gray-50 p-4 rounded-xl text-center font-mono">
-              <div><span className="text-[10px] text-gray-400 uppercase block">Recette</span><span className="text-base font-bold text-green-700">{Number(selectedClosure.gross_revenue ?? selectedClosure.grossRevenue ?? selectedClosure.total_revenue ?? selectedClosure.totalRevenue).toLocaleString()} MAD</span></div>
-              <div><span className="text-[10px] text-gray-400 uppercase block">Dépenses</span><span className="text-base font-bold text-red-600">{Number(selectedClosure.total_expenses ?? selectedClosure.totalExpenses).toLocaleString()} MAD</span></div>
-              <div><span className="text-[10px] text-gray-400 uppercase block">Cash Net</span><span className="text-base font-bold text-gray-900">{Number(selectedClosure.net_cash ?? selectedClosure.netCash).toLocaleString()} MAD</span></div>
+            <div className="grid grid-cols-3 gap-3 p-4 rounded-xl text-center font-num" style={{ background: SURFACE_2 }}>
+              <div><span className="text-[10px] uppercase block" style={{ color: TEXT_FAINT }}>Recette</span><span className="text-base font-bold" style={{ color: POS }}>{Number(selectedClosure.gross_revenue ?? selectedClosure.grossRevenue ?? selectedClosure.total_revenue ?? selectedClosure.totalRevenue).toLocaleString()} MAD</span></div>
+              <div><span className="text-[10px] uppercase block" style={{ color: TEXT_FAINT }}>Dépenses</span><span className="text-base font-bold" style={{ color: NEG }}>{Number(selectedClosure.total_expenses ?? selectedClosure.totalExpenses).toLocaleString()} MAD</span></div>
+              <div><span className="text-[10px] uppercase block" style={{ color: TEXT_FAINT }}>Cash Net</span><span className="text-base font-bold" style={{ color: TEXT_PRIMARY }}>{Number(selectedClosure.net_cash ?? selectedClosure.netCash).toLocaleString()} MAD</span></div>
             </div>
 
             <div>
-              <h4 className="text-xs font-bold uppercase text-gray-400 mb-2">Dépenses du Jour</h4>
+              <h4 className="text-xs font-bold uppercase mb-2" style={{ color: TEXT_FAINT }}>Dépenses du Jour</h4>
               {(selectedClosure.expenses || []).length > 0 ? (
                 <div className="space-y-1">
                   {selectedClosure.expenses.map((e: any, idx: number) => (
-                    <div key={idx} className="flex justify-between text-xs p-2 bg-gray-50 rounded border">
-                      <span>{e.label}</span>
-                      <span className="font-mono font-bold text-red-600">{e.amount} MAD</span>
+                    <div key={idx} className="flex justify-between text-xs p-2 rounded" style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE}` }}>
+                      <span style={{ color: TEXT_MUTED }}>{e.label}</span>
+                      <span className="font-num font-bold" style={{ color: NEG }}>{e.amount} MAD</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-gray-400 italic">Aucune dépense.</p>
+                <p className="text-xs italic" style={{ color: TEXT_FAINT }}>Aucune dépense.</p>
               )}
             </div>
 
             <div>
-              <h4 className="text-xs font-bold uppercase text-gray-400 mb-2">Avances du Personnel</h4>
+              <h4 className="text-xs font-bold uppercase mb-2" style={{ color: TEXT_FAINT }}>Avances du Personnel</h4>
               {(selectedClosure.staffAdvances || selectedClosure.staff_advances || []).length > 0 ? (
                 <div className="space-y-1">
                   {(selectedClosure.staffAdvances || selectedClosure.staff_advances).map((a: any, idx: number) => (
-                    <div key={idx} className="flex justify-between text-xs p-2 bg-gray-50 rounded border">
-                      <span>{a.employeeName || a.employee_name}</span>
-                      <span className="font-mono font-bold text-amber-600">{a.amount} MAD</span>
+                    <div key={idx} className="flex justify-between text-xs p-2 rounded" style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE}` }}>
+                      <span style={{ color: TEXT_MUTED }}>{a.employeeName || a.employee_name}</span>
+                      <span className="font-num font-bold" style={{ color: ACCENT.gold.hex }}>{a.amount} MAD</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-gray-400 italic">Aucune avance.</p>
+                <p className="text-xs italic" style={{ color: TEXT_FAINT }}>Aucune avance.</p>
               )}
             </div>
 
             <div>
-              <h4 className="text-xs font-bold uppercase text-gray-400 mb-2">État du Stock Réel</h4>
+              <h4 className="text-xs font-bold uppercase mb-2" style={{ color: TEXT_FAINT }}>État du Stock Réel</h4>
               {(selectedClosure.inventory_logs || selectedClosure.inventory || []).length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {(selectedClosure.inventory_logs || selectedClosure.inventory).map((i: any, idx: number) => {
@@ -666,52 +951,52 @@ export default function AdminDashboardPage() {
                     const label = i.materialLabel || fallbackLabels[code] || code || 'Article';
 
                     return (
-                      <div key={idx} className="p-2 bg-gray-50 rounded border text-xs">
-                        <span className="block font-semibold text-gray-600">{label}</span>
-                        <span className="font-mono font-bold text-gray-900">{i.physical_closing_count ?? i.physicalClosingCount}</span>
+                      <div key={idx} className="p-2 rounded text-xs" style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE}` }}>
+                        <span className="block font-medium" style={{ color: TEXT_MUTED }}>{label}</span>
+                        <span className="font-num font-bold" style={{ color: TEXT_PRIMARY }}>{i.physical_closing_count ?? i.physicalClosingCount}</span>
                       </div>
-                    )
+                    );
                   })}
                 </div>
               ) : (
-                <p className="text-xs text-gray-400 italic">⚠️ Aucun stock enregistré en base de données.</p>
+                <p className="text-xs italic" style={{ color: TEXT_FAINT }}>Aucun stock enregistré en base de données.</p>
               )}
             </div>
 
             {(selectedClosure.notes || selectedClosure.discrepancy_summary) && (
               <div>
-                <h4 className="text-xs font-bold uppercase text-gray-400 mb-1">Notes Actuelles</h4>
-                <p className="text-xs bg-yellow-50 text-yellow-900 p-3 rounded border border-yellow-200 italic">"{selectedClosure.notes || selectedClosure.discrepancy_summary}"</p>
+                <h4 className="text-xs font-bold uppercase mb-1" style={{ color: TEXT_FAINT }}>Notes Actuelles</h4>
+                <p className="text-xs p-3 rounded italic" style={{ background: ACCENT.gold.soft, color: '#D8C4A2', border: `1px solid ${ACCENT.gold.hex}25` }}>"{selectedClosure.notes || selectedClosure.discrepancy_summary}"</p>
               </div>
             )}
 
             {(selectedClosure.receiptImageUrl || selectedClosure.receipt_image_url) && (
               <div>
-                <h4 className="text-xs font-bold uppercase text-gray-400 mb-2">Justificatif / Reçu Caisse</h4>
-                <div className="border rounded-xl p-2 text-center bg-gray-50">
-                  <img src={selectedClosure.receiptImageUrl || selectedClosure.receipt_image_url} alt="Reçu" className="max-h-60 mx-auto rounded-lg border" />
-                  <a href={selectedClosure.receiptImageUrl || selectedClosure.receipt_image_url} target="_blank" className="text-xs text-blue-600 hover:underline mt-2 inline-block font-bold">Ouvrir en plein écran ↗</a>
+                <h4 className="text-xs font-bold uppercase mb-2" style={{ color: TEXT_FAINT }}>Justificatif / Reçu Caisse</h4>
+                <div className="rounded-xl p-2 text-center" style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE}` }}>
+                  <img src={selectedClosure.receiptImageUrl || selectedClosure.receipt_image_url} alt="Reçu" className="max-h-60 mx-auto rounded-lg" style={{ border: `1px solid ${HAIRLINE}` }} />
+                  <a href={selectedClosure.receiptImageUrl || selectedClosure.receipt_image_url} target="_blank" rel="noreferrer" className="text-xs mt-2 inline-block font-bold hover:underline" style={{ color: ACCENT.slate.hex }}>Ouvrir en plein écran ↗</a>
                 </div>
               </div>
             )}
 
             {selectedClosureAttempts.length > 0 && (
-              <div className="mt-8 border-t-2 border-red-100 pt-6">
-                <h3 className="text-lg font-bold text-red-600 mb-4">⚠️ Historique des Soumissions (Tentatives du jour)</h3>
-                <div className="space-y-4">
+              <div className="mt-8 pt-6" style={{ borderTop: `2px solid ${ACCENT.clay.hex}30` }}>
+                <h3 className="text-base font-semibold mb-4 font-display" style={{ color: ACCENT.clay.hex }}>Historique des Soumissions (Tentatives du jour)</h3>
+                <div className="space-y-3">
                   {selectedClosureAttempts.map((attempt, idx) => {
                     const data = attempt.attempted_data || attempt;
-                    const expTotal = (data.expenses || []).reduce((sum: number, e:any) => sum + (Number(e.amount) || 0), 0);
+                    const expTotal = (data.expenses || []).reduce((sum: number, e: any) => sum + (Number(e.amount) || 0), 0);
                     return (
-                      <div key={idx} className="bg-red-50 p-4 rounded-xl border border-red-200 text-sm">
-                        <div className="flex justify-between border-b border-red-200 pb-2 mb-2">
-                          <span className="font-bold text-red-800">Tentative #{idx + 1}</span>
-                          <span className="text-xs text-red-600">{new Date(attempt.attempted_at || new Date()).toLocaleTimeString()}</span>
+                      <div key={idx} className="p-4 rounded-xl text-sm" style={{ background: ACCENT.clay.soft, border: `1px solid ${ACCENT.clay.hex}30` }}>
+                        <div className="flex justify-between pb-2 mb-2" style={{ borderBottom: `1px solid ${ACCENT.clay.hex}25` }}>
+                          <span className="font-bold" style={{ color: ACCENT.clay.hex }}>Tentative #{idx + 1}</span>
+                          <span className="text-xs font-num" style={{ color: TEXT_FAINT }}>{new Date(attempt.attempted_at || new Date()).toLocaleTimeString()}</span>
                         </div>
-                        <ul className="space-y-1 text-red-900">
-                          <li><strong>Recette Brute:</strong> {data.grossRevenue || data.gross_revenue} MAD</li>
-                          <li><strong>Dépenses:</strong> {expTotal} MAD</li>
-                          {data.notes && <li><strong>Note:</strong> "{data.notes}"</li>}
+                        <ul className="space-y-1" style={{ color: TEXT_MUTED }}>
+                          <li><strong style={{ color: TEXT_PRIMARY }}>Recette Brute :</strong> {data.grossRevenue || data.gross_revenue} MAD</li>
+                          <li><strong style={{ color: TEXT_PRIMARY }}>Dépenses :</strong> {expTotal} MAD</li>
+                          {data.notes && <li><strong style={{ color: TEXT_PRIMARY }}>Note :</strong> "{data.notes}"</li>}
                         </ul>
                       </div>
                     );
