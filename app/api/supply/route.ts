@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       await supabase.from('report_deliveries').delete().eq('closure_id', existingClosure.id);
       
       const reportUrl = new URL('/api/reports/email', request.url);
-      fetch(reportUrl, {
+      await fetch(reportUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-cron-secret': process.env.CRON_SECRET || '' },
         body: JSON.stringify({ closureId: existingClosure.id }),

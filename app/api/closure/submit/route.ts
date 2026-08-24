@@ -234,7 +234,7 @@ export async function POST(request: NextRequest) {
     if (supplyCheck) {
       // Salem has already submitted, so Tayeb is second. Fire the report email!
       const reportUrl = new URL('/api/reports/email', request.url);
-      fetch(reportUrl, {
+      await fetch(reportUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-cron-secret': process.env.CRON_SECRET || '' },
         body: JSON.stringify({ closureId }),
