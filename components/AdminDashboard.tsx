@@ -1,3 +1,7 @@
+// ==========================================
+// FILE: components/AdminDashboard.tsx
+// ==========================================
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -8,7 +12,7 @@ import { Line, Bar } from 'react-chartjs-2';
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
 
 // =====================================================================
-// ICONS — updated with optional style prop for TypeScript safety
+// ICONS
 // =====================================================================
 const IconReceipt = ({ className = '', style }: { className?: string; style?: React.CSSProperties }) => (
   <svg viewBox="0 0 24 24" fill="none" className={className} style={style}>
@@ -55,6 +59,11 @@ const IconLogout = ({ className = '', style }: { className?: string; style?: Rea
     <path d="M9.5 12H21m0 0-3-3m3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
+const IconScale = ({ className = '', style }: { className?: string; style?: React.CSSProperties }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className} style={style}>
+    <path d="M12 3v18M7 7l-3.5 7a3.5 3.5 0 0 0 7 0L7 7Zm10 0-3.5 7a3.5 3.5 0 0 0 7 0L17 7ZM4 20h16M6 6l6-2 6 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
 
 const BG = '#0B0C0E';
 const SURFACE = '#131417';
@@ -65,7 +74,7 @@ const TEXT_PRIMARY = '#E4E2DD';
 const TEXT_MUTED = '#8B8D93';
 const TEXT_FAINT = '#5B5D63';
 
-type TabId = 'closures' | 'supplies' | 'summary' | 'salaries' | 'partnership';
+type TabId = 'closures' | 'supplies' | 'summary' | 'salaries' | 'partnership' | 'consumption';
 type AccentKey = 'sage' | 'slate' | 'plum' | 'gold' | 'clay';
 
 const TABS: { id: TabId; label: string; icon: React.FC<{ className?: string; style?: React.CSSProperties }>; accent: AccentKey }[] = [
@@ -74,6 +83,7 @@ const TABS: { id: TabId; label: string; icon: React.FC<{ className?: string; sty
   { id: 'summary', label: 'Bilan Mensuel', icon: IconPie, accent: 'plum' },
   { id: 'salaries', label: 'Salaires & Avances', icon: IconUsers, accent: 'gold' },
   { id: 'partnership', label: 'Partage des Parts', icon: IconHandshake, accent: 'clay' },
+  { id: 'consumption', label: 'Consommation', icon: IconScale, accent: 'slate' },
 ];
 
 const ACCENT: Record<AccentKey, { hex: string; soft: string; text: string }> = {
@@ -86,6 +96,16 @@ const ACCENT: Record<AccentKey, { hex: string; soft: string; text: string }> = {
 
 const POS = '#7FA98A';
 const NEG = '#B1806F';
+
+const CONSUMPTION_ITEMS: { code: string; label: string; theoreticalField: string; match: string[] }[] = [
+  { code: 'dinde', label: 'Dinde', theoreticalField: 'theoretical_dinde_kg', match: ['dinde'] },
+  { code: 'vh', label: 'VH', theoreticalField: 'theoretical_vh_kg', match: ['vh', 'viande hachée'] },
+  { code: 'mozzarella', label: 'Mozzarella', theoreticalField: 'theoretical_mozzarella_kg', match: ['mozzarella', 'mozarella'] },
+  { code: 'crispy', label: 'Crispy', theoreticalField: 'theoretical_crispy_pcs', match: ['crispy'] },
+  { code: 'tortilla', label: 'Tortillas', theoreticalField: 'theoretical_tortillas_pcs', match: ['tortilla'] },
+  { code: 'burger', label: 'Buns', theoreticalField: 'theoretical_buns_pcs', match: ['burger'] },
+];
+const VARIANCE_FLAG_RATIO = 0.1;
 
 function SectionEyebrow({ accent, children }: { accent: AccentKey; children: React.ReactNode }) {
   const a = ACCENT[accent];
@@ -124,6 +144,7 @@ export default function AdminDashboardPage() {
   const [closures, setClosures] = useState<any[]>([]);
   const [attempts, setAttempts] = useState<any[]>([]);
   const [supplies, setSupplies] = useState<any[]>([]);
+  const [consumptionRecords, setConsumptionRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
@@ -168,11 +189,12 @@ export default function AdminDashboardPage() {
         },
       };
 
-      const [closuresRes, attemptsRes, supplyRes, summaryRes] = await Promise.all([
+      const [closuresRes, attemptsRes, supplyRes, summaryRes, consumptionRes] = await Promise.all([
         fetch(`/api/closure/list?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null),
         fetch(`/api/dashboard/attempts?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null),
         fetch(`/api/supply?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null),
-        fetch(`/api/dashboard/summary?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null)
+        fetch(`/api/dashboard/summary?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null),
+        fetch(`/api/consumption?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null)
       ]);
 
       const errors: string[] = [];
@@ -199,6 +221,13 @@ export default function AdminDashboardPage() {
       } else {
         setFixedExpenses([]);
         setStaffSalaries([]);
+      }
+
+      if (consumptionRes && consumptionRes.ok) {
+        const consData = await consumptionRes.json();
+        setConsumptionRecords(consData.records || []);
+      } else {
+        setConsumptionRecords([]);
       }
 
       if (errors.length > 0) setFetchError(`Échec de récupération : ${errors.join(', ')}`);
@@ -337,6 +366,28 @@ export default function AdminDashboardPage() {
       }
     });
     return totalAdv;
+  };
+
+  // --- CONSUMPTION HELPERS ---
+  const getInventoryValue = (targetClosure: any, matchList: string[]) => {
+    if (!targetClosure) return 0;
+    const logs = targetClosure.inventory_logs || targetClosure.inventory || [];
+    const inv = logs.find((i: any) => {
+      const code = (i.raw_materials?.code || i.materialCode || '').toLowerCase();
+      return matchList.some(m => code.includes(m));
+    });
+    return Number(inv?.physical_closing_count ?? inv?.physicalClosingCount ?? 0);
+  };
+
+  const getSupplyValueForDate = (businessDate: string, matchList: string[]) => {
+    const supply = supplies.find(s => (s.business_date || s.businessDate || s.date) === businessDate);
+    if (!supply || !(supply.items || supply.supply_items)) return 0;
+    const items = supply.items || supply.supply_items || [];
+    const item = items.find((i: any) => {
+      const code = (i.code || i.label || '').toLowerCase();
+      return matchList.some(m => code.includes(m));
+    });
+    return Number(item?.quantity || 0);
   };
 
   const totalFixedExpenses = fixedExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
@@ -881,12 +932,133 @@ export default function AdminDashboardPage() {
                 </div>
               </Card>
             )}
+
+            {/* ============================= TAB: CONSOMMATION ============================= */}
+            {activeTab === 'consumption' && (
+              <Card className="space-y-6">
+                <div className="flex justify-between items-center flex-wrap gap-4">
+                  <div>
+                    <SectionEyebrow accent="slate">Audit de Consommation</SectionEyebrow>
+                    <h3 className="text-lg font-semibold font-display" style={{ color: TEXT_PRIMARY }}>
+                      Comparaison : Réel (Tayeb) vs Théorique (Salem)
+                    </h3>
+                  </div>
+                </div>
+
+                {filteredClosures.length > 0 ? (
+                  <div className="space-y-6">
+                    {/* Date Selector for Detailed View */}
+                    <div className="flex items-center gap-3 p-4 rounded-xl" style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE}` }}>
+                      <span className="text-xs font-bold uppercase tracking-wider" style={{ color: TEXT_FAINT }}>Sélectionner une Date :</span>
+                      <select
+                        value={selectedClosureDate || ''}
+                        onChange={(e) => {
+                          const found = filteredClosures.find(c => (c.business_date || c.businessDate || c.date) === e.target.value);
+                          setSelectedClosure(found || null);
+                        }}
+                        className="bg-transparent text-sm font-bold outline-none cursor-pointer p-2 rounded-lg"
+                        style={{ background: SURFACE, color: TEXT_PRIMARY, border: `1px solid ${HAIRLINE_STRONG}` }}
+                      >
+                        {filteredClosures.map(c => {
+                          const d = c.business_date || c.businessDate || c.date;
+                          return <option key={d} value={d}>{d}</option>;
+                        })}
+                      </select>
+                    </div>
+
+                    {/* Detailed Comparison Table for Selected Date */}
+                    {(() => {
+                      const activeDate = selectedClosureDate || (filteredClosures[0] ? (filteredClosures[0].business_date || filteredClosures[0].businessDate || filteredClosures[0].date) : null);
+                      if (!activeDate) return <p className="text-sm text-center py-8" style={{ color: TEXT_FAINT }}>Aucune date sélectionnée.</p>;
+
+                      const closureObj = filteredClosures.find(c => (c.business_date || c.businessDate || c.date) === activeDate);
+                      const prevClosureObj = closures
+                        .filter(c => (c.business_date || c.businessDate || c.date) < activeDate)
+                        .sort((a, b) => new Date(b.business_date || b.businessDate || b.date).getTime() - new Date(a.business_date || a.businessDate || a.date).getTime())[0];
+                      
+                      const consumptionRec = consumptionRecords.find(r => String(r.record_date || '') === activeDate);
+
+                      return (
+                        <div className="space-y-4">
+                          <div className="overflow-auto rounded-xl" style={{ border: `1px solid ${HAIRLINE}` }}>
+                            <table className="w-full text-left text-sm">
+                              <thead style={{ background: SURFACE }}>
+                                <tr className="text-[11px] uppercase tracking-wide" style={{ color: TEXT_FAINT }}>
+                                  <th className="py-3 px-4 font-bold">Article</th>
+                                  <th className="py-3 px-4 font-bold text-center">Réel Consommé (Tayeb)</th>
+                                  <th className="py-3 px-4 font-bold text-center">Théorique (Ventes Salem)</th>
+                                  <th className="py-3 px-4 font-bold text-center">Différence (Écart)</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {CONSUMPTION_ITEMS.map((def) => {
+                                  const opening = getInventoryValue(prevClosureObj, def.match);
+                                  const supplyQty = getSupplyValueForDate(activeDate, def.match);
+                                  const closing = getInventoryValue(closureObj, def.match);
+                                  
+                                  // Réel = Stock Précédent + Achats - Reste physique
+                                  const actualConsumed = opening + supplyQty - closing;
+                                  
+                                  // Théorique depuis Salem
+                                  const theoretical = consumptionRec ? Number(consumptionRec[def.theoreticalField] ?? 0) : null;
+                                  
+                                  const variance = theoretical !== null ? actualConsumed - theoretical : null;
+                                  const ratio = theoretical && theoretical > 0 ? Math.abs(variance || 0) / theoretical : 0;
+                                  const isFlagged = theoretical !== null && ratio > VARIANCE_FLAG_RATIO;
+
+                                  return (
+                                    <tr key={def.code} className="transition-colors hover:bg-white/[0.02]" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
+                                      <td className="py-3 px-4 font-semibold" style={{ color: TEXT_PRIMARY }}>{def.label}</td>
+                                      
+                                      {/* Tayeb Real Consumption */}
+                                      <td className="py-3 px-4 text-center font-num font-bold" style={{ color: TEXT_PRIMARY }}>
+                                        {actualConsumed.toFixed(2)}
+                                      </td>
+
+                                      {/* Salem Theoretical Sales-based Consumption */}
+                                      <td className="py-3 px-4 text-center font-num font-medium" style={{ color: TEXT_MUTED }}>
+                                        {theoretical !== null ? theoretical.toFixed(2) : <span className="italic text-xs" style={{ color: TEXT_FAINT }}>Non saisi par Salem</span>}
+                                      </td>
+
+                                      {/* Difference / Variance */}
+                                      <td className="py-3 px-4 text-center font-num font-bold">
+                                        {variance !== null ? (
+                                          <span className="px-2.5 py-1 rounded-lg text-xs" style={{
+                                            background: isFlagged ? ACCENT.clay.soft : SURFACE_2,
+                                            color: isFlagged ? NEG : POS,
+                                            border: `1px solid ${isFlagged ? ACCENT.clay.hex + '40' : HAIRLINE}`
+                                          }}>
+                                            {variance > 0 ? `+${variance.toFixed(2)}` : variance.toFixed(2)} {isFlagged && '⚠'}
+                                          </span>
+                                        ) : (
+                                          <span style={{ color: TEXT_FAINT }}>—</span>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                          <p className="text-xs" style={{ color: TEXT_FAINT }}>
+                            * Légende : La différence indique l'écart entre le stock réellement sorti de l'inventaire de Tayeb et ce que les ventes de Salem justifient. Un écart supérieur à 10% (marqué ⚠) indique une divergence potentielle.
+                          </p>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  <p className="text-sm text-center py-12" style={{ color: TEXT_FAINT }}>Aucune clôture disponible pour ce mois.</p>
+                )}
+              </Card>
+            )}
+
           </>
         )}
       </div>
 
       {/* ============================= CLOSURE DETAILS MODAL ============================= */}
-      {selectedClosure && (
+      {selectedClosure && activeTab === 'closures' && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl space-y-6" style={{ background: SURFACE, border: `1px solid ${HAIRLINE_STRONG}` }}>
             <div className="flex justify-between items-center pb-4" style={{ borderBottom: `1px solid ${HAIRLINE}` }}>

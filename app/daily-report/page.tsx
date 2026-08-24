@@ -79,15 +79,7 @@ export default function DailyReportPage() {
       return column.match.includes(code);
     });
     
-    let val = Number(inv?.physical_closing_count ?? inv?.physicalClosingCount ?? 0);
-    
-    // If the item is tracked in KG and Tayeb entered a number > 20, 
-    // we assume he entered grams and convert it to KG automatically.
-    if (column.isKg && val > 20) {
-      val = val / 1000;
-    }
-    
-    return val;
+    return Number(inv?.physical_closing_count ?? inv?.physicalClosingCount ?? 0);
   };
 
   const getSupplyValue = (column: typeof TRACKED_COLUMNS[0]) => {

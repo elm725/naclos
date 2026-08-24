@@ -17,11 +17,7 @@ const TRACKED_COLUMNS = [
 ];
 
 export async function POST(request: NextRequest) {
-  const cronSecret = request.headers.get('x-cron-secret');
-  if (!cronSecret || cronSecret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+  // 1. Get the closureId from the frontend request
   const { closureId } = await request.json();
   if (!closureId) {
     return NextResponse.json({ error: 'closureId is required' }, { status: 400 });
@@ -29,13 +25,13 @@ export async function POST(request: NextRequest) {
 
   const supabase = getSupabaseAdminClient();
 
-  // 1. Fetch current closure
+  // 2. Fetch current closure
   const closure = await loadFullClosureRecord(supabase, closureId);
   if (!closure) {
     return NextResponse.json({ error: 'Closure not found' }, { status: 404 });
   }
 
-  // 2. Fetch PREVIOUS closure (for Opening Stock)
+  // 3. Fetch PREVIOUS closure (for Opening Stock)
   const { data: prevClosures } = await supabase
     .from('daily_closures')
     .select('id')
@@ -48,13 +44,14 @@ export async function POST(request: NextRequest) {
     prevClosure = await loadFullClosureRecord(supabase, prevClosures[0].id);
   }
 
-  // 3. Fetch current day's supplies (Alimentation)
+  // 4. Fetch current day's supplies (Alimentation)
   const { data: currentSupply } = await supabase
     .from('supply_purchases')
     .select('*')
     .eq('business_date', closure.businessDate)
     .maybeSingle();
 
+  // 5. Build recipient list from Environment Variables
   const recipients = [process.env.REPORT_RECIPIENT_OWNER, process.env.REPORT_RECIPIENT_PARTNER].filter(
     (r): r is string => Boolean(r)
   );
@@ -64,7 +61,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // We send the new HTML layout and remove the old attachments for now
+    // 6. Send the email using Resend
     await resend.emails.send({
       from: process.env.REPORT_SENDER_EMAIL || 'Naclos Operations <reports@naclos.ma>',
       to: recipients,
@@ -72,6 +69,7 @@ export async function POST(request: NextRequest) {
       html: buildEmailHtml(closure, prevClosure, currentSupply),
     });
 
+    // 7. Log the successful delivery
     await supabase.from('report_deliveries').insert({
       closure_id: closureId,
       recipients,
@@ -108,9 +106,7 @@ async function loadFullClosureRecord(supabase: any, closureId: string): Promise<
 function getStockValue(targetClosure: any, column: any) {
   if (!targetClosure || !targetClosure.inventory) return 0;
   const inv = targetClosure.inventory.find((i: any) => column.match.includes((i.raw_materials?.code || '').toLowerCase()));
-  let val = Number(inv?.physical_closing_count || 0);
-  if (column.isKg && val > 20) val = val / 1000;
-  return val;
+  return Number(inv?.physical_closing_count || 0);
 }
 
 function getSupplyValue(currentSupply: any, column: any) {

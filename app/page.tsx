@@ -20,7 +20,7 @@ export default function WelcomePage() {
     } else if (pin === '1111') {
       sessionStorage.setItem('naclos_authenticated', 'true');
       sessionStorage.setItem('naclos_role', 'salem');
-      router.push('/supply');
+      router.push('/salem-hub');
     } else if (pin === '1952') {
       // Noureddine's PIN
       sessionStorage.setItem('naclos_authenticated', 'true');

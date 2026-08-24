@@ -165,6 +165,7 @@ export async function POST(request: NextRequest) {
   }
 
   const closureId = closure.id;
+  const childErrors: string[] = [];
 
   try {
     if (payload.expenses.length > 0) {
@@ -173,7 +174,7 @@ export async function POST(request: NextRequest) {
         const { error } = await supabase.from('expenses').insert(
           validExpenses.map((e) => ({ closure_id: closureId, label: e.label, amount: e.amount }))
         );
-        if (error) console.error('Expenses insert error:', error);
+        if (error) { console.error('Expenses insert error:', error); childErrors.push(`Dépenses: ${error.message}`); }
       }
     }
 
@@ -183,7 +184,7 @@ export async function POST(request: NextRequest) {
         const { error } = await supabase.from('staff_advances').insert(
           validAdvances.map((a) => ({ closure_id: closureId, employee_name: a.employeeName, amount: a.amount, note: a.note }))
         );
-        if (error) console.error('Staff advances insert error:', error);
+        if (error) { console.error('Staff advances insert error:', error); childErrors.push(`Avances: ${error.message}`); }
       }
     }
 
@@ -200,8 +201,19 @@ export async function POST(request: NextRequest) {
             physical_closing_count: i.physicalClosingCount,
           }))
         );
-        if (error) console.error('Inventory logs insert error:', error);
+        if (error) { console.error('Inventory logs insert error:', error); childErrors.push(`Stock: ${error.message}`); }
       }
+    }
+
+    // --- ROLL BACK IF ANY CHILD INSERT FAILED ---
+    // A closure with missing expenses/advances/stock is worse than no closure at all —
+    // it silently corrupts the monthly totals and the emailed report.
+    if (childErrors.length > 0) {
+      await supabase.from('daily_closures').delete().eq('id', closureId);
+      return NextResponse.json(
+        { error: `Échec partiel de la sauvegarde, clôture annulée: ${childErrors.join(' | ')}` },
+        { status: 500 }
+      );
     }
 
     await supabase.from('audit_log').insert({
