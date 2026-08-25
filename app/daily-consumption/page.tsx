@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function DailyConsumptionPage() {
@@ -18,13 +18,14 @@ export default function DailyConsumptionPage() {
     return `${year}-${month}-${day}`;
   });
 
-useEffect(() => {
-  const authRole = sessionStorage.getItem('naclos_role');
-  const isAuth = sessionStorage.getItem('naclos_authenticated');
-  if (isAuth !== 'true' || (authRole !== 'salem' && authRole !== 'admin')) {
-    router.push('/');
-  }
-}, [router]);
+  useEffect(() => {
+    const authRole = sessionStorage.getItem('naclos_role');
+    const isAuth = sessionStorage.getItem('naclos_authenticated');
+    if (isAuth !== 'true' || (authRole !== 'salem' && authRole !== 'admin')) {
+      router.push('/');
+    }
+  }, [router]);
+
   const [sales, setSales] = useState({
     // Pizzas S
     pizzaS_vh: 0,
