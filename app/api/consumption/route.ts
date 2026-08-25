@@ -3,19 +3,25 @@ import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client for the server route
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!; // Make sure this is in your Vercel env vars
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!; 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function POST(request: Request) {
   try {
     const data = await request.json();
-    const todayDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    // Grab the specific date Salem chose on the frontend
+    const targetDate = data.businessDate;
 
-    // 1. Delete any existing record for today to allow a clean overwrite
+    if (!targetDate) {
+      return NextResponse.json({ error: 'La date (businessDate) est requise.' }, { status: 400 });
+    }
+
+    // 1. Delete existing record for this specific date to allow overwriting mistakes
     await supabase
       .from('daily_consumption_records')
       .delete()
-      .eq('record_date', todayDate);
+      .eq('record_date', targetDate);
 
     // 2. Insert the updated consumption data
     const { error } = await supabase
@@ -28,7 +34,7 @@ export async function POST(request: Request) {
           theoretical_crispy_pcs: data.crispyKg, 
           theoretical_tortillas_pcs: data.totalTortillas,
           theoretical_buns_pcs: data.totalBurgers,
-          record_date: todayDate, 
+          record_date: targetDate, // Force the database to use Salem's selected date
         }
       ]);
 
