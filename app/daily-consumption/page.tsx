@@ -17,7 +17,6 @@ export default function DailyConsumptionPage() {
     const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   });
-const router = useRouter();
 
 useEffect(() => {
   const authRole = sessionStorage.getItem('naclos_role');
