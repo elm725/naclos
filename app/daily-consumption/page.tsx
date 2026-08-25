@@ -17,7 +17,15 @@ export default function DailyConsumptionPage() {
     const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   });
+const router = useRouter();
 
+useEffect(() => {
+  const authRole = sessionStorage.getItem('naclos_role');
+  const isAuth = sessionStorage.getItem('naclos_authenticated');
+  if (isAuth !== 'true' || (authRole !== 'salem' && authRole !== 'admin')) {
+    router.push('/');
+  }
+}, [router]);
   const [sales, setSales] = useState({
     // Pizzas S
     pizzaS_vh: 0,

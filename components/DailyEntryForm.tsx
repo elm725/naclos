@@ -264,7 +264,7 @@ export default function DailyEntryForm() {
     }
   };
 
-  // SUCCESS SCREEN MATCHING YOUR REQUEST
+  // SUCCESS SCREEN
   if (success) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center font-sans">
@@ -336,7 +336,7 @@ export default function DailyEntryForm() {
             type="number"
             required
             min="0"
-            step="0.01"
+            step="0.001"
             placeholder="0.00"
             value={grossRevenue}
             onChange={(e) => setGrossRevenue(e.target.value === '' ? '' : Number(e.target.value))}
@@ -381,6 +381,7 @@ export default function DailyEntryForm() {
               <input
                 type="number"
                 min="0"
+                step="0.001"
                 placeholder="Montant (MAD)"
                 value={exp.amount}
                 onChange={(e) => updateExpense(idx, 'amount', e.target.value === '' ? '' : Number(e.target.value))}
@@ -432,6 +433,7 @@ export default function DailyEntryForm() {
               <input
                 type="number"
                 min="0"
+                step="0.001"
                 placeholder="Montant (MAD)"
                 value={adv.amount}
                 onChange={(e) => updateAdvance(idx, 'amount', e.target.value === '' ? '' : Number(e.target.value))}

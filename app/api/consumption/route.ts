@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { monthRange } from '@/lib/Daterange';
 export const dynamic = 'force-dynamic'; // <-- ADD THIS LINE
 
 
@@ -53,12 +54,13 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const month = searchParams.get('month'); // 'YYYY-MM', optional
+    const month = searchParams.get('month');
 
     let query = supabase.from('daily_consumption_records').select('*').order('record_date', { ascending: false });
 
     if (month) {
-      query = query.gte('record_date', `${month}-01`).lt('record_date', `${month}-32`);
+      const { start, end } = monthRange(month);   // CHANGED
+      query = query.gte('record_date', start).lt('record_date', end); // CHANGED
     }
 
     const { data, error } = await query;

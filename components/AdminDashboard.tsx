@@ -1,7 +1,3 @@
-// ==========================================
-// FILE: components/AdminDashboard.tsx
-// ==========================================
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -161,6 +157,14 @@ export default function AdminDashboardPage() {
   const [fixedExpenses, setFixedExpenses] = useState<{ id: string | number, label: string, amount: number }[]>([]);
   const [staffSalaries, setStaffSalaries] = useState<{ id: string | number, name: string, baseSalary: number }[]>([]);
   const [isSavingSummary, setIsSavingSummary] = useState(false);
+  
+  // --- PARTNER ADVANCES STATE ---
+  const [partnerAdvances, setPartnerAdvances] = useState<any[]>([]);
+  const [newAdvancePartner, setNewAdvancePartner] = useState<'Tayeb' | 'Noureddine'>('Noureddine');
+  const [newAdvanceAmount, setNewAdvanceAmount] = useState<number | ''>('');
+  const [newAdvanceDate, setNewAdvanceDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [newAdvanceNote, setNewAdvanceNote] = useState('');
+  const [isSavingAdvance, setIsSavingAdvance] = useState(false);
 
   const addFixedExpense = () => setFixedExpenses([...fixedExpenses, { id: Date.now(), label: '', amount: 0 }]);
   const updateFixedExpense = (id: string | number, field: string, val: any) => setFixedExpenses(fixedExpenses.map(e => e.id === id ? { ...e, [field]: val } : e));
@@ -189,12 +193,13 @@ export default function AdminDashboardPage() {
         },
       };
 
-      const [closuresRes, attemptsRes, supplyRes, summaryRes, consumptionRes] = await Promise.all([
+      const [closuresRes, attemptsRes, supplyRes, summaryRes, consumptionRes, partnerAdvRes] = await Promise.all([
         fetch(`/api/closure/list?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null),
         fetch(`/api/dashboard/attempts?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null),
         fetch(`/api/supply?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null),
         fetch(`/api/dashboard/summary?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null),
-        fetch(`/api/consumption?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null)
+        fetch(`/api/consumption?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null),
+        fetch(`/api/partner-advances?month=${selectedMonth}&_t=${timestamp}`, fetchOptions).catch(() => null)
       ]);
 
       const errors: string[] = [];
@@ -229,6 +234,13 @@ export default function AdminDashboardPage() {
       } else {
         setConsumptionRecords([]);
       }
+      
+      if (partnerAdvRes && partnerAdvRes.ok) {
+        const paData = await partnerAdvRes.json();
+        setPartnerAdvances(paData.advances || []);
+      } else {
+        setPartnerAdvances([]);
+      }
 
       if (errors.length > 0) setFetchError(`Échec de récupération : ${errors.join(', ')}`);
     } catch (err) {
@@ -256,6 +268,40 @@ export default function AdminDashboardPage() {
       alert('Erreur lors de la sauvegarde du bilan.');
     } finally {
       setIsSavingSummary(false);
+    }
+  };
+  
+  const addPartnerAdvance = async () => {
+    if (!newAdvanceAmount || Number(newAdvanceAmount) <= 0) return;
+    setIsSavingAdvance(true);
+    try {
+      const res = await fetch('/api/partner-advances', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          partnerName: newAdvancePartner,
+          amount: Number(newAdvanceAmount),
+          advanceDate: newAdvanceDate,
+          note: newAdvanceNote,
+        }),
+      });
+      if (!res.ok) throw new Error('Échec de l\'ajout');
+      setNewAdvanceAmount('');
+      setNewAdvanceNote('');
+      fetchData();
+    } catch (err) {
+      alert('Erreur lors de l\'ajout de l\'avance.');
+    } finally {
+      setIsSavingAdvance(false);
+    }
+  };
+
+  const removePartnerAdvance = async (id: string) => {
+    try {
+      await fetch(`/api/partner-advances?id=${id}`, { method: 'DELETE' });
+      fetchData();
+    } catch {
+      alert('Erreur lors de la suppression.');
     }
   };
 
@@ -308,12 +354,16 @@ export default function AdminDashboardPage() {
   }, null);
 
   const staffAdvancesMap: { [key: string]: number } = {};
+  const staffAdvanceEntries: { [key: string]: { date: string; amount: number }[] } = {};
   filteredClosures.forEach((c) => {
+    const bDate = c.business_date || c.businessDate || c.date;
     const advances = c.staffAdvances || c.staff_advances || [];
     advances.forEach((adv: any) => {
       const name = adv.employee_name || adv.employeeName;
       if (name) {
         staffAdvancesMap[name] = (staffAdvancesMap[name] || 0) + (Number(adv.amount) || 0);
+        if (!staffAdvanceEntries[name]) staffAdvanceEntries[name] = [];
+        staffAdvanceEntries[name].push({ date: bDate, amount: Number(adv.amount) || 0 });
       }
     });
   });
@@ -326,7 +376,6 @@ export default function AdminDashboardPage() {
     ],
   };
 
-  // --- STRICT CHART FILTER: DINDE, VH, CRISPY, MOZZARELLA (catching all spellings) ---
   const chartCoreItems = ['dinde', 'vh', 'viande hachée (vh)', 'mozarella', 'mozzarella', 'crispy'];
   const inventoryVolumes: Record<string, number> = {};
   
@@ -368,7 +417,6 @@ export default function AdminDashboardPage() {
     return totalAdv;
   };
 
-  // --- CONSUMPTION HELPERS ---
   const getInventoryValue = (targetClosure: any, matchList: string[]) => {
     if (!targetClosure) return 0;
     const logs = targetClosure.inventory_logs || targetClosure.inventory || [];
@@ -390,6 +438,29 @@ export default function AdminDashboardPage() {
     return Number(item?.quantity || 0);
   };
 
+  const consumptionRows = filteredClosures.map((closure) => {
+    const bDate = closure.business_date || closure.businessDate || closure.date;
+    const prevClosure = closures
+      .filter(c => (c.business_date || c.businessDate || c.date) < bDate)
+      .sort((a, b) => new Date(b.business_date || b.businessDate || b.date).getTime() - new Date(a.business_date || a.businessDate || a.date).getTime())[0];
+
+    const consumptionRecord = consumptionRecords.find(r => String(r.record_date || '') === bDate);
+
+    const items = CONSUMPTION_ITEMS.map((def) => {
+      const opening = getInventoryValue(prevClosure, def.match);
+      const supplyQty = getSupplyValueForDate(bDate, def.match);
+      const closing = getInventoryValue(closure, def.match);
+      const actual = opening + supplyQty - closing;
+      const theoretical = consumptionRecord ? Number(consumptionRecord[def.theoreticalField] ?? 0) : null;
+      const variance = theoretical !== null ? actual - theoretical : null;
+      const ratio = theoretical && theoretical > 0 ? Math.abs(variance || 0) / theoretical : 0;
+      const flagged = theoretical !== null && ratio > VARIANCE_FLAG_RATIO;
+      return { code: def.code, label: def.label, actual, theoretical, variance, flagged };
+    });
+
+    return { date: bDate, hasConsumptionData: !!consumptionRecord, items };
+  });
+
   const totalFixedExpenses = fixedExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
   const totalBaseSalaries = staffSalaries.reduce((sum, s) => sum + (Number(s.baseSalary) || 0), 0);
   const totalOverallExpenses = totalExpenses + totalFixedExpenses + totalBaseSalaries;
@@ -397,9 +468,17 @@ export default function AdminDashboardPage() {
   const monthlyExpenseRatio = totalRevenue > 0 ? ((totalOverallExpenses / totalRevenue) * 100).toFixed(1) : '0';
 
   // --- DYNAMIC PARTNER CALCULATIONS WITH ADVANCE DEDUCTION ---
+  const partnerAdvanceTotals: { [key: string]: number } = {};
+  partnerAdvances.forEach((a) => {
+    partnerAdvanceTotals[a.partner_name] = (partnerAdvanceTotals[a.partner_name] || 0) + (Number(a.amount) || 0);
+  });
+  const tayebPartnerAdvances = partnerAdvanceTotals['Tayeb'] || 0;
+  const noureddinePartnerAdvances = partnerAdvanceTotals['Noureddine'] || 0;
+
   const tayebAdvances = getStaffAdvance('Tayeb');
-  const noureddineShare = monthlyNetProfit / 2;
-  const tayebShare = (monthlyNetProfit / 2) - tayebAdvances;
+  
+  const noureddineShare = (monthlyNetProfit / 2) - noureddinePartnerAdvances;
+  const tayebShare = (monthlyNetProfit / 2) - tayebAdvances - tayebPartnerAdvances;
 
   const selectedClosureDate = selectedClosure ? (selectedClosure.business_date || selectedClosure.businessDate || selectedClosure.date) : null;
   const selectedClosureAttempts = selectedClosureDate
@@ -882,9 +961,21 @@ export default function AdminDashboardPage() {
                   <div className="space-y-3">
                     {Object.keys(staffAdvancesMap).length > 0 ? (
                       Object.entries(staffAdvancesMap).map(([name, totalAmt]) => (
-                        <div key={name} className="flex justify-between items-center p-3 rounded-xl" style={{ background: ACCENT.gold.soft, border: `1px solid ${ACCENT.gold.hex}25` }}>
-                          <span className="font-semibold text-sm" style={{ color: TEXT_PRIMARY }}>{name}</span>
-                          <span className="font-num font-bold" style={{ color: ACCENT.gold.hex }}>{totalAmt.toLocaleString()} MAD</span>
+                        <div key={name} className="p-3 rounded-xl space-y-2" style={{ background: ACCENT.gold.soft, border: `1px solid ${ACCENT.gold.hex}25` }}>
+                          <div className="flex justify-between items-center">
+                            <span className="font-semibold text-sm" style={{ color: TEXT_PRIMARY }}>{name}</span>
+                            <span className="font-num font-bold" style={{ color: ACCENT.gold.hex }}>{totalAmt.toLocaleString()} MAD</span>
+                          </div>
+                          <div className="space-y-1">
+                            {staffAdvanceEntries[name]
+                              .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                              .map((entry, idx) => (
+                                <div key={idx} className="flex justify-between text-[11px]" style={{ color: TEXT_FAINT }}>
+                                  <span>{entry.date}</span>
+                                  <span className="font-num">{entry.amount.toLocaleString()} MAD</span>
+                                </div>
+                              ))}
+                          </div>
                         </div>
                       ))
                     ) : (
@@ -909,7 +1000,7 @@ export default function AdminDashboardPage() {
                     <p className="text-3xl font-bold font-num mt-1" style={{ color: POS }}>
                       {noureddineShare.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
                     </p>
-                    <p className="text-xs" style={{ color: TEXT_FAINT }}>50% du bénéfice net réel du mois</p>
+                    <p className="text-xs" style={{ color: TEXT_FAINT }}>50% du bénéfice net réel du mois (moins ses avances)</p>
                   </div>
 
                   <div className="p-5 rounded-2xl space-y-1" style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE}` }}>
@@ -922,7 +1013,7 @@ export default function AdminDashboardPage() {
                         Avances du mois : -{tayebAdvances.toLocaleString()} MAD
                       </span>
                     </div>
-                    <p className="text-xs" style={{ color: TEXT_FAINT }}>50% du bénéfice net moins ses avances de caisse enregistrées</p>
+                    <p className="text-xs" style={{ color: TEXT_FAINT }}>50% du bénéfice net moins ses avances de caisse et de partenariat</p>
                   </div>
                 </div>
 
@@ -930,135 +1021,128 @@ export default function AdminDashboardPage() {
                   <span>Basé sur le bénéfice net mensuel réel (Total net: {monthlyNetProfit.toLocaleString()} MAD)</span>
                   <span className="font-num font-bold" style={{ color: TEXT_MUTED }}>Total Partage : {(noureddineShare + tayebShare).toLocaleString()} MAD</span>
                 </div>
+
+                <div className="mt-6 pt-6 space-y-4" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
+                  <SectionEyebrow accent="clay">Avances sur Part (Partenaires)</SectionEyebrow>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <select
+                      value={newAdvancePartner}
+                      onChange={(e) => setNewAdvancePartner(e.target.value as 'Tayeb' | 'Noureddine')}
+                      className="p-2.5 rounded-xl text-sm font-semibold outline-none"
+                      style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE_STRONG}`, color: TEXT_PRIMARY }}
+                    >
+                      <option value="Noureddine">Noureddine</option>
+                      <option value="Tayeb">Tayeb</option>
+                    </select>
+                    <input
+                      type="date" value={newAdvanceDate} onChange={(e) => setNewAdvanceDate(e.target.value)}
+                      className="p-2.5 rounded-xl text-sm font-semibold outline-none [color-scheme:dark]"
+                      style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE_STRONG}`, color: TEXT_PRIMARY }}
+                    />
+                    <input
+                      type="number" step="0.001" placeholder="Montant (MAD)" value={newAdvanceAmount}
+                      onChange={(e) => setNewAdvanceAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="w-32 p-2.5 rounded-xl text-sm font-semibold font-num outline-none"
+                      style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE_STRONG}`, color: TEXT_PRIMARY }}
+                    />
+                    <input
+                      type="text" placeholder="Note (optionnel)" value={newAdvanceNote}
+                      onChange={(e) => setNewAdvanceNote(e.target.value)}
+                      className="flex-1 min-w-[140px] p-2.5 rounded-xl text-sm font-semibold outline-none"
+                      style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE_STRONG}`, color: TEXT_PRIMARY }}
+                    />
+                    <button
+                      onClick={addPartnerAdvance}
+                      disabled={isSavingAdvance}
+                      className="px-4 py-2.5 text-xs font-bold rounded-xl transition hover:opacity-80 disabled:opacity-50"
+                      style={{ background: ACCENT.clay.soft, color: ACCENT.clay.hex, border: `1px solid ${ACCENT.clay.hex}30` }}
+                    >
+                      + Ajouter Avance
+                    </button>
+                  </div>
+
+                  {partnerAdvances.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {partnerAdvances.map((a) => (
+                        <div key={a.id} className="flex justify-between items-center text-xs p-2.5 rounded-lg" style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE}` }}>
+                          <span style={{ color: TEXT_MUTED }}>
+                            <span className="font-bold" style={{ color: TEXT_PRIMARY }}>{a.partner_name}</span> — {a.advance_date}
+                            {a.note ? ` · ${a.note}` : ''}
+                          </span>
+                          <div className="flex items-center gap-3">
+                            <span className="font-num font-bold" style={{ color: ACCENT.clay.hex }}>{Number(a.amount).toLocaleString()} MAD</span>
+                            <button onClick={() => removePartnerAdvance(a.id)} className="font-bold hover:opacity-70" style={{ color: ACCENT.clay.hex }}>✕</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs italic" style={{ color: TEXT_FAINT }}>Aucune avance sur part ce mois.</p>
+                  )}
+                </div>
               </Card>
             )}
 
             {/* ============================= TAB: CONSOMMATION ============================= */}
             {activeTab === 'consumption' && (
-              <Card className="space-y-6">
-                <div className="flex justify-between items-center flex-wrap gap-4">
-                  <div>
-                    <SectionEyebrow accent="slate">Audit de Consommation</SectionEyebrow>
-                    <h3 className="text-lg font-semibold font-display" style={{ color: TEXT_PRIMARY }}>
-                      Comparaison : Réel (Tayeb) vs Théorique (Salem)
-                    </h3>
-                  </div>
+              <Card className="space-y-4">
+                <SectionEyebrow accent="slate">Vérification Quotidienne</SectionEyebrow>
+                <div className="flex justify-between items-center flex-wrap gap-2">
+                  <h3 className="text-base font-semibold font-display" style={{ color: TEXT_PRIMARY }}>Consommation Réelle vs Théorique</h3>
+                  <span className="text-xs" style={{ color: TEXT_FAINT }}>Réel = Stock + Achats − Reste · Théorique = calculé depuis les ventes (Salem)</span>
                 </div>
 
-                {filteredClosures.length > 0 ? (
-                  <div className="space-y-6">
-                    {/* Date Selector for Detailed View */}
-                    <div className="flex items-center gap-3 p-4 rounded-xl" style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE}` }}>
-                      <span className="text-xs font-bold uppercase tracking-wider" style={{ color: TEXT_FAINT }}>Sélectionner une Date :</span>
-                      <select
-                        value={selectedClosureDate || ''}
-                        onChange={(e) => {
-                          const found = filteredClosures.find(c => (c.business_date || c.businessDate || c.date) === e.target.value);
-                          setSelectedClosure(found || null);
-                        }}
-                        className="bg-transparent text-sm font-bold outline-none cursor-pointer p-2 rounded-lg"
-                        style={{ background: SURFACE, color: TEXT_PRIMARY, border: `1px solid ${HAIRLINE_STRONG}` }}
-                      >
-                        {filteredClosures.map(c => {
-                          const d = c.business_date || c.businessDate || c.date;
-                          return <option key={d} value={d}>{d}</option>;
-                        })}
-                      </select>
-                    </div>
-
-                    {/* Detailed Comparison Table for Selected Date */}
-                    {(() => {
-                      const activeDate = selectedClosureDate || (filteredClosures[0] ? (filteredClosures[0].business_date || filteredClosures[0].businessDate || filteredClosures[0].date) : null);
-                      if (!activeDate) return <p className="text-sm text-center py-8" style={{ color: TEXT_FAINT }}>Aucune date sélectionnée.</p>;
-
-                      const closureObj = filteredClosures.find(c => (c.business_date || c.businessDate || c.date) === activeDate);
-                      const prevClosureObj = closures
-                        .filter(c => (c.business_date || c.businessDate || c.date) < activeDate)
-                        .sort((a, b) => new Date(b.business_date || b.businessDate || b.date).getTime() - new Date(a.business_date || a.businessDate || a.date).getTime())[0];
-                      
-                      const consumptionRec = consumptionRecords.find(r => String(r.record_date || '') === activeDate);
-
-                      return (
-                        <div className="space-y-4">
-                          <div className="overflow-auto rounded-xl" style={{ border: `1px solid ${HAIRLINE}` }}>
-                            <table className="w-full text-left text-sm">
-                              <thead style={{ background: SURFACE }}>
-                                <tr className="text-[11px] uppercase tracking-wide" style={{ color: TEXT_FAINT }}>
-                                  <th className="py-3 px-4 font-bold">Article</th>
-                                  <th className="py-3 px-4 font-bold text-center">Réel Consommé (Tayeb)</th>
-                                  <th className="py-3 px-4 font-bold text-center">Théorique (Ventes Salem)</th>
-                                  <th className="py-3 px-4 font-bold text-center">Différence (Écart)</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {CONSUMPTION_ITEMS.map((def) => {
-                                  const opening = getInventoryValue(prevClosureObj, def.match);
-                                  const supplyQty = getSupplyValueForDate(activeDate, def.match);
-                                  const closing = getInventoryValue(closureObj, def.match);
-                                  
-                                  // Réel = Stock Précédent + Achats - Reste physique
-                                  const actualConsumed = opening + supplyQty - closing;
-                                  
-                                  // Théorique depuis Salem
-                                  const theoretical = consumptionRec ? Number(consumptionRec[def.theoreticalField] ?? 0) : null;
-                                  
-                                  const variance = theoretical !== null ? actualConsumed - theoretical : null;
-                                  const ratio = theoretical && theoretical > 0 ? Math.abs(variance || 0) / theoretical : 0;
-                                  const isFlagged = theoretical !== null && ratio > VARIANCE_FLAG_RATIO;
-
-                                  return (
-                                    <tr key={def.code} className="transition-colors hover:bg-white/[0.02]" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
-                                      <td className="py-3 px-4 font-semibold" style={{ color: TEXT_PRIMARY }}>{def.label}</td>
-                                      
-                                      {/* Tayeb Real Consumption */}
-                                      <td className="py-3 px-4 text-center font-num font-bold" style={{ color: TEXT_PRIMARY }}>
-                                        {actualConsumed.toFixed(2)}
-                                      </td>
-
-                                      {/* Salem Theoretical Sales-based Consumption */}
-                                      <td className="py-3 px-4 text-center font-num font-medium" style={{ color: TEXT_MUTED }}>
-                                        {theoretical !== null ? theoretical.toFixed(2) : <span className="italic text-xs" style={{ color: TEXT_FAINT }}>Non saisi par Salem</span>}
-                                      </td>
-
-                                      {/* Difference / Variance */}
-                                      <td className="py-3 px-4 text-center font-num font-bold">
-                                        {variance !== null ? (
-                                          <span className="px-2.5 py-1 rounded-lg text-xs" style={{
-                                            background: isFlagged ? ACCENT.clay.soft : SURFACE_2,
-                                            color: isFlagged ? NEG : POS,
-                                            border: `1px solid ${isFlagged ? ACCENT.clay.hex + '40' : HAIRLINE}`
-                                          }}>
-                                            {variance > 0 ? `+${variance.toFixed(2)}` : variance.toFixed(2)} {isFlagged && '⚠'}
-                                          </span>
-                                        ) : (
-                                          <span style={{ color: TEXT_FAINT }}>—</span>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
-                          <p className="text-xs" style={{ color: TEXT_FAINT }}>
-                            * Légende : La différence indique l'écart entre le stock réellement sorti de l'inventaire de Tayeb et ce que les ventes de Salem justifient. Un écart supérieur à 10% (marqué ⚠) indique une divergence potentielle.
-                          </p>
-                        </div>
-                      );
-                    })()}
+                {consumptionRows.length > 0 ? (
+                  <div className="overflow-auto max-h-[600px] rounded-xl" style={{ border: `1px solid ${HAIRLINE}` }}>
+                    <table className="w-full text-left text-sm">
+                      <thead className="sticky top-0 z-10" style={{ background: SURFACE }}>
+                        <tr className="text-[11px] uppercase tracking-wide" style={{ color: TEXT_FAINT }}>
+                          <th className="py-3 px-3 font-bold">Date</th>
+                          {CONSUMPTION_ITEMS.map(def => (
+                            <th key={def.code} className="py-3 px-3 font-bold text-center">{def.label}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {consumptionRows.map((row) => (
+                          <tr key={row.date} className="transition-colors hover:bg-white/[0.02]" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
+                            <td className="py-3 px-3 font-semibold" style={{ color: TEXT_PRIMARY }}>{row.date}</td>
+                            {row.items.map((item) => (
+                              <td key={item.code} className="py-3 px-3 text-center font-num">
+                                {item.theoretical === null ? (
+                                  <span style={{ color: TEXT_FAINT }}>{item.actual.toFixed(2)}</span>
+                                ) : (
+                                  <div className="flex flex-col items-center">
+                                    <span className="font-bold" style={{ color: item.flagged ? NEG : TEXT_PRIMARY }}>
+                                      {item.actual.toFixed(2)} {item.flagged && '⚠'}
+                                    </span>
+                                    <span className="text-[10px]" style={{ color: TEXT_FAINT }}>
+                                      théo: {item.theoretical.toFixed(2)}
+                                    </span>
+                                  </div>
+                                )}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 ) : (
-                  <p className="text-sm text-center py-12" style={{ color: TEXT_FAINT }}>Aucune clôture disponible pour ce mois.</p>
+                  <p className="text-sm text-center py-12" style={{ color: TEXT_FAINT }}>Aucune donnée pour ce mois.</p>
                 )}
+
+                <p className="text-xs" style={{ color: TEXT_FAINT }}>
+                  ⚠ = écart de plus de 10% entre consommation théorique (ventes de Salem) et réelle (stock physique de Tayeb). Les jours sans "théo" n'ont pas encore de saisie de consommation.
+                </p>
               </Card>
             )}
-
           </>
         )}
       </div>
 
       {/* ============================= CLOSURE DETAILS MODAL ============================= */}
-      {selectedClosure && activeTab === 'closures' && (
+      {selectedClosure && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl space-y-6" style={{ background: SURFACE, border: `1px solid ${HAIRLINE_STRONG}` }}>
             <div className="flex justify-between items-center pb-4" style={{ borderBottom: `1px solid ${HAIRLINE}` }}>

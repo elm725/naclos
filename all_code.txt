@@ -946,7 +946,7 @@ export async function POST(request: NextRequest) {
     if (supplyCheck) {
       // Salem has already submitted, so Tayeb is second. Fire the report email!
       const reportUrl = new URL('/api/reports/email', request.url);
-      fetch(reportUrl, {
+      await fetch(reportUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-cron-secret': process.env.CRON_SECRET || '' },
         body: JSON.stringify({ closureId }),
@@ -1043,16 +1043,33 @@ export async function GET(request: NextRequest) {
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+export const dynamic = 'force-dynamic'; // <-- ADD THIS LINE
+
+
 
 // Initialize Supabase client for the server route
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!; // Make sure this is in your Vercel env vars
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!; 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function POST(request: Request) {
   try {
     const data = await request.json();
+    
+    // Grab the specific date Salem chose on the frontend
+    const targetDate = data.businessDate;
 
+    if (!targetDate) {
+      return NextResponse.json({ error: 'La date (businessDate) est requise.' }, { status: 400 });
+    }
+
+    // 1. Delete existing record for this specific date to allow overwriting mistakes
+    await supabase
+      .from('daily_consumption_records')
+      .delete()
+      .eq('record_date', targetDate);
+
+    // 2. Insert the updated consumption data
     const { error } = await supabase
       .from('daily_consumption_records')
       .insert([
@@ -1060,10 +1077,10 @@ export async function POST(request: Request) {
           theoretical_dinde_kg: data.dindeKg,
           theoretical_vh_kg: data.vhKg,
           theoretical_mozzarella_kg: data.mozzKg,
-          theoretical_crispy_pcs: data.crispyKg, // using the variable name from frontend
+          theoretical_crispy_pcs: data.crispyKg, 
           theoretical_tortillas_pcs: data.totalTortillas,
           theoretical_buns_pcs: data.totalBurgers,
-          record_date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+          record_date: targetDate, // Force the database to use Salem's selected date
         }
       ]);
 
@@ -1301,7 +1318,7 @@ export async function POST(request: NextRequest) {
       await supabase.from('report_deliveries').delete().eq('closure_id', existingClosure.id);
       
       const reportUrl = new URL('/api/reports/email', request.url);
-      fetch(reportUrl, {
+      await fetch(reportUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-cron-secret': process.env.CRON_SECRET || '' },
         body: JSON.stringify({ closureId: existingClosure.id }),
@@ -2230,22 +2247,55 @@ import { useRouter } from 'next/navigation';
 export default function DailyConsumptionPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
+  const [businessDate, setBusinessDate] = useState(() => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
+
   const [sales, setSales] = useState({
     // Pizzas S
-    pizzaS_vh: 0, pizzaS_margarita: 0, pizzaS_poulet: 0, 
-    pizzaS_thon: 0, pizzaS_naclos: 0, pizzaS_fruit_de_mer: 0,
+    pizzaS_vh: 0,
+    pizzaS_margarita: 0,
+    pizzaS_poulet: 0,
+    pizzaS_thon: 0,
+    pizzaS_naclos: 0,
+    pizzaS_fruit_de_mer: 0,
     // Pizzas M
-    pizzaM_poulet: 0, pizzaM_naclos: 0, pizzaM_vh: 0,
+    pizzaM_poulet: 0,
+    pizzaM_naclos: 0,
+    pizzaM_vh: 0,
+    pizzaM_margarita: 0,
+    pizzaM_thon: 0,
+    pizzaM_fruit_de_mer: 0,
     // Tacos
-    tacos_dinde: 0, tacos_fried_chicken: 0, tacos_kefta: 0, tacos_mixte: 0,
+    tacos_dinde: 0,
+    tacos_fried_chicken: 0,
+    tacos_kefta: 0,
+    tacos_mixte: 0,
     // Italien
-    italien_dinde: 0, italien_fried_chicken: 0, italien_kefta: 0, italien_mixte: 0,
+    italien_dinde: 0,
+    italien_fried_chicken: 0,
+    italien_kefta: 0,
+    italien_mixte: 0,
     // Gratins
-    gratin_poulet: 0, gratin_jambon: 0, gratin_vh: 0, gratin_mixte: 0,
+    gratin_poulet: 0,
+    gratin_jambon: 0,
+    gratin_vh: 0,
+    gratin_mixte: 0,
     // Burgers
-    burger_vh_hamburger: 0, burger_vh_cheese: 0, burger_vh_double: 0, 
-    burger_chicken_single: 0, burger_chicken_double: 0,
+    burger_vh_hamburger: 0,
+    burger_vh_cheese: 0,
+    burger_vh_double: 0,
+    burger_chicken_single: 0,
+    burger_chicken_cheese: 0,
+    burger_chicken_double: 0,
     // Suppléments
     sup_poulet: 0,
   });
@@ -2259,49 +2309,92 @@ export default function DailyConsumptionPage() {
   };
 
   // --- Calculations ---
-  const totalPizzaS = sales.pizzaS_vh + sales.pizzaS_margarita + sales.pizzaS_poulet + sales.pizzaS_thon + sales.pizzaS_naclos + sales.pizzaS_fruit_de_mer;
-  const totalPizzaM = sales.pizzaM_poulet + sales.pizzaM_naclos + sales.pizzaM_vh;
-  const totalGratins = sales.gratin_poulet + sales.gratin_jambon + sales.gratin_vh + sales.gratin_mixte;
-  
-  const totalChickenBurgers = sales.burger_chicken_single + sales.burger_chicken_double;
+  const totalPizzaS =
+    sales.pizzaS_vh +
+    sales.pizzaS_margarita +
+    sales.pizzaS_poulet +
+    sales.pizzaS_thon +
+    sales.pizzaS_naclos +
+    sales.pizzaS_fruit_de_mer;
+    
+  const totalPizzaM = 
+    sales.pizzaM_poulet + 
+    sales.pizzaM_naclos + 
+    sales.pizzaM_vh + 
+    sales.pizzaM_margarita + 
+    sales.pizzaM_thon + 
+    sales.pizzaM_fruit_de_mer;
+
+  const totalGratins =
+    sales.gratin_poulet + sales.gratin_jambon + sales.gratin_vh + sales.gratin_mixte;
+
+  const totalChickenBurgers = sales.burger_chicken_single + sales.burger_chicken_cheese + sales.burger_chicken_double;
   const singleBeefBurgers = sales.burger_vh_hamburger + sales.burger_vh_cheese;
   const doubleBeefBurgers = sales.burger_vh_double;
   const totalBeefBurgers = singleBeefBurgers + doubleBeefBurgers;
 
-  // Dinde (kg) - Fixed: Includes 100g for every Supplément Poulet
-  const dindeKg = (100 * (sales.pizzaM_poulet + sales.italien_dinde + sales.gratin_poulet + sales.sup_poulet) + 
-      50 * (sales.pizzaS_poulet + sales.pizzaM_naclos + sales.tacos_mixte + sales.italien_mixte + sales.gratin_mixte) + 
-      120 * sales.tacos_dinde + 25 * sales.pizzaS_naclos) / 1000;
+  // Dinde (kg)
+  const dindeKg =
+    (100 * (sales.pizzaM_poulet + sales.italien_dinde + sales.gratin_poulet + sales.sup_poulet) +
+      50 *
+        (sales.pizzaS_poulet +
+          sales.pizzaM_naclos +
+          sales.tacos_mixte +
+          sales.italien_mixte +
+          sales.gratin_mixte) +
+      120 * sales.tacos_dinde +
+      25 * sales.pizzaS_naclos) /
+    1000;
 
-  // VH (kg) - Fixed: Double Cheese uses 200g
-  const vhKg = (50 * (sales.pizzaS_vh + sales.gratin_mixte + sales.pizzaM_naclos + sales.tacos_mixte + sales.italien_mixte) + 
-      100 * (sales.pizzaM_vh + sales.italien_kefta + sales.tacos_kefta + singleBeefBurgers + sales.gratin_vh) + 
-      200 * doubleBeefBurgers + 
-      25 * sales.pizzaS_naclos) / 1000;
+  // VH (kg)
+  const vhKg =
+    (50 *
+      (sales.pizzaS_vh +
+        sales.gratin_mixte +
+        sales.pizzaM_naclos +
+        sales.tacos_mixte +
+        sales.italien_mixte) +
+      100 *
+        (sales.pizzaM_vh +
+          sales.italien_kefta +
+          sales.tacos_kefta +
+          singleBeefBurgers +
+          sales.gratin_vh) +
+      200 * doubleBeefBurgers +
+      25 * sales.pizzaS_naclos) /
+    1000;
 
   // Mozzarella (kg)
   const mozzKg = 0.12 * (totalPizzaM + totalGratins) + 0.06 * totalPizzaS;
 
   // Crispy (Pieces)
-  const crispyKg = 1.5 * (sales.tacos_fried_chicken + sales.italien_fried_chicken) + 
-      0.5 * (sales.tacos_mixte + sales.italien_mixte) + 
-      1.0 * sales.burger_chicken_single + 
-      2.0 * sales.burger_chicken_double;
+  const crispyKg =
+    1.5 * (sales.tacos_fried_chicken + sales.italien_fried_chicken) +
+    0.5 * (sales.tacos_mixte + sales.italien_mixte) +
+    1.0 * (sales.burger_chicken_single + sales.burger_chicken_cheese) +
+    2.0 * sales.burger_chicken_double;
 
   // Units
-  const totalTortillas = sales.tacos_dinde + sales.tacos_fried_chicken + sales.tacos_kefta + sales.tacos_mixte;
+  const totalTortillas =
+    sales.tacos_dinde + sales.tacos_fried_chicken + sales.tacos_kefta + sales.tacos_mixte;
   const totalBurgers = totalBeefBurgers + totalChickenBurgers;
 
-  // --- Submission Handler ---
-  const handleSubmit = async () => {
-    if (!confirm('Voulez-vous enregistrer la consommation d\'aujourd\'hui ?')) return;
-    
+  // --- Submission Flow ---
+  const handleInitialSubmit = () => {
+    setErrorMessage(null);
+    setShowConfirmModal(true);
+  };
+
+  const executeSubmit = async () => {
+    setShowConfirmModal(false);
     setIsSubmitting(true);
+    setErrorMessage(null);
     try {
       const res = await fetch('/api/consumption', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          businessDate,
           dindeKg,
           vhKg,
           mozzKg,
@@ -2312,24 +2405,24 @@ export default function DailyConsumptionPage() {
       });
 
       if (!res.ok) throw new Error('Erreur lors de la sauvegarde');
-      
-      alert('Consommation enregistrée avec succès !');
-      router.push('/salem-hub');
+
+      // Trigger the success screen!
+      setIsSuccess(true);
     } catch (error) {
-      alert('Erreur de connexion. Veuillez réessayer.');
       console.error(error);
+      setErrorMessage("Erreur de connexion. Impossible d'enregistrer la consommation.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const InputRow = ({ label, field }: { label: string, field: string }) => (
+  const InputRow = ({ label, field }: { label: string; field: string }) => (
     <div className="flex justify-between items-center py-1">
       <span className="text-sm text-gray-700">{label}</span>
       <input
         type="number"
         min="0"
-        value={sales[field as keyof typeof sales] || ""}
+        value={sales[field as keyof typeof sales] || ''}
         onChange={(e) => handleChange(field, e.target.value)}
         placeholder="0"
         className="w-16 bg-gray-50 border border-gray-300 rounded-lg p-1 text-center text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
@@ -2337,44 +2430,91 @@ export default function DailyConsumptionPage() {
     </div>
   );
 
-  return (
-    <main className="min-h-screen bg-gray-50 p-4 pb-20">
-      <div className="max-w-4xl mx-auto space-y-6">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Consommation Théorique</h1>
-            <p className="text-xs text-gray-500">Saisissez les ventes de la journée</p>
+  // --- FULL SCREEN SUCCESS UI ---
+  if (isSuccess) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center font-sans">
+        <div className="w-full max-w-sm bg-white p-8 rounded-2xl shadow-xl border border-gray-100 flex flex-col items-center">
+          <h2 className="text-2xl font-black text-gray-900 tracking-tight mb-2">MERCI SALEM</h2>
+          
+          <div className="my-6 w-24 h-24 rounded-full border-4 border-emerald-500 flex items-center justify-center bg-emerald-50 animate-bounce">
+            <svg className="w-12 h-12 text-emerald-600 stroke-[3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
           </div>
-          <button 
-            onClick={() => router.push('/salem-hub')} 
-            className="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg text-gray-700 transition"
+
+          <h3 className="text-lg font-bold text-emerald-600 uppercase tracking-widest mb-2"> Soumission Réussie</h3>
+          <p className="text-xs text-gray-500 uppercase tracking-wider mb-8">
+            Consommation enregistrée pour le {businessDate}
+          </p>
+
+          <button
+            onClick={() => router.push('/salem-hub')}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-6 rounded-full shadow-lg transition transform active:scale-95 text-base tracking-wide"
           >
-            Retour
+            Continuer 
           </button>
         </div>
+      </div>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-gray-50 p-4 pb-20 relative">
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Header with Date Selection */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Consommation Théorique</h1>
+            <p className="text-xs text-gray-500">Saisissez les ventes journalières pour calculer la consommation</p>
+            <div className="flex items-center gap-2 mt-3">
+              <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">
+                Date de vente :
+              </label>
+              <input
+                type="date"
+                value={businessDate}
+                onChange={(e) => setBusinessDate(e.target.value)}
+                className="border border-gray-300 px-2 py-1 rounded-lg text-sm font-bold text-gray-900 bg-gray-50 outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+          </div>
+          <button
+            onClick={() => router.push('/salem-hub')}
+            className="self-start sm:self-center text-xs bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg text-gray-700 transition"
+          >
+            ← Retour Hub
+          </button>
+        </div>
+
+        {/* Error Banner */}
+        {errorMessage && (
+          <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-xl text-sm font-bold shadow-sm">
+            ⚠ {errorMessage}
+          </div>
+        )}
 
         {/* Live Summary Cards */}
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
           {[
-            { label: "DINDE", val: dindeKg.toFixed(2), unit: "kg", color: "text-blue-600" },
-            { label: "VH", val: vhKg.toFixed(2), unit: "kg", color: "text-red-600" },
-            { label: "MOZZARELLA", val: mozzKg.toFixed(2), unit: "kg", color: "text-amber-500" },
-            { label: "CRISPY", val: crispyKg.toFixed(1), unit: "pcs", color: "text-orange-600" },
-            { label: "TORTILLAS", val: totalTortillas, unit: "pcs", color: "text-emerald-600" },
-            { label: "BUNS", val: totalBurgers, unit: "pcs", color: "text-emerald-600" },
+            { label: 'DINDE', val: dindeKg.toFixed(2), unit: 'kg', color: 'text-blue-600' },
+            { label: 'VH', val: vhKg.toFixed(2), unit: 'kg', color: 'text-red-600' },
+            { label: 'MOZZARELLA', val: mozzKg.toFixed(2), unit: 'kg', color: 'text-amber-500' },
+            { label: 'CRISPY', val: crispyKg.toFixed(1), unit: 'pcs', color: 'text-orange-600' },
+            { label: 'TORTILLAS', val: totalTortillas, unit: 'pcs', color: 'text-emerald-600' },
+            { label: 'BUNS', val: totalBurgers, unit: 'pcs', color: 'text-emerald-600' },
           ].map((stat, idx) => (
             <div key={idx} className="bg-white border border-gray-200 p-3 rounded-xl text-center shadow-sm">
               <p className="text-[10px] text-gray-500 font-bold tracking-wider">{stat.label}</p>
-              <p className={`text-lg font-black ${stat.color} mt-1`}>{stat.val} <span className="text-[10px] text-gray-400 font-normal">{stat.unit}</span></p>
+              <p className={`text-lg font-black ${stat.color} mt-1`}>
+                {stat.val} <span className="text-[10px] text-gray-400 font-normal">{stat.unit}</span>
+              </p>
             </div>
           ))}
         </div>
 
         {/* Inputs Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          
           <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
             <h2 className="font-bold text-gray-800 border-b pb-2 mb-3">🌮 Tacos & Italien</h2>
             <InputRow label="Tacos Dinde" field="tacos_dinde" />
@@ -2397,9 +2537,12 @@ export default function DailyConsumptionPage() {
             <InputRow label="Pizza S - Naclos" field="pizzaS_naclos" />
             <InputRow label="Pizza S - Fruit de Mer" field="pizzaS_fruit_de_mer" />
             <div className="my-2 border-t border-gray-100"></div>
-            <InputRow label="Pizza M - Poulet" field="pizzaM_poulet" />
             <InputRow label="Pizza M - Viande Hachée" field="pizzaM_vh" />
+            <InputRow label="Pizza M - Poulet" field="pizzaM_poulet" />
+            <InputRow label="Pizza M - Margarita" field="pizzaM_margarita" />
+            <InputRow label="Pizza M - Thon" field="pizzaM_thon" />
             <InputRow label="Pizza M - Naclos" field="pizzaM_naclos" />
+            <InputRow label="Pizza M - Fruit de Mer" field="pizzaM_fruit_de_mer" />
           </div>
 
           <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm space-y-6">
@@ -2408,10 +2551,12 @@ export default function DailyConsumptionPage() {
               <InputRow label="Hamburger (VH)" field="burger_vh_hamburger" />
               <InputRow label="Cheese Burger (VH)" field="burger_vh_cheese" />
               <InputRow label="Double Cheese (VH)" field="burger_vh_double" />
+              <div className="my-2 border-t border-gray-100"></div>
               <InputRow label="Chicken Burger" field="burger_chicken_single" />
+              <InputRow label="Cheese Burger (Crispy)" field="burger_chicken_cheese" />
               <InputRow label="Double Chicken Burger" field="burger_chicken_double" />
             </div>
-            
+
             <div>
               <h2 className="font-bold text-gray-800 border-b pb-2 mb-3">🍟 Suppléments</h2>
               <InputRow label="Supplément Poulet" field="sup_poulet" />
@@ -2425,21 +2570,52 @@ export default function DailyConsumptionPage() {
             <InputRow label="Gratin Jambon" field="gratin_jambon" />
             <InputRow label="Gratin Mixte" field="gratin_mixte" />
           </div>
-
         </div>
 
         {/* Submit Button */}
         <div className="pt-6">
-          <button 
-            onClick={handleSubmit}
+          <button
+            onClick={handleInitialSubmit}
             disabled={isSubmitting}
             className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg rounded-2xl transition disabled:opacity-50 shadow-md"
           >
-            {isSubmitting ? 'Enregistrement...' : 'Enregistrer la Consommation'}
+            {isSubmitting ? 'Enregistrement...' : `Enregistrer la Consommation (${businessDate})`}
           </button>
         </div>
-
       </div>
+
+      {/* Modern Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all">
+            <div className="p-6 text-center space-y-4">
+              <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">Confirmation</h3>
+              <p className="text-sm text-gray-500 leading-relaxed">
+                Voulez-vous vraiment enregistrer la consommation théorique pour la journée du <span className="font-bold text-gray-900">{businessDate}</span> ?
+              </p>
+            </div>
+            <div className="flex border-t border-gray-100">
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="flex-1 px-4 py-4 text-gray-500 font-bold hover:bg-gray-50 transition"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={executeSubmit}
+                className="flex-1 px-4 py-4 text-emerald-600 font-bold hover:bg-emerald-50 border-l border-gray-100 transition"
+              >
+                Confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
@@ -3309,6 +3485,10 @@ function NumberField({ label, value, onChange }: { label: string; value: number;
 
 === components/AdminDashboard.tsx ===
 
+// ==========================================
+// FILE: components/AdminDashboard.tsx
+// ==========================================
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -3319,7 +3499,7 @@ import { Line, Bar } from 'react-chartjs-2';
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
 
 // =====================================================================
-// ICONS — updated with optional style prop for TypeScript safety
+// ICONS
 // =====================================================================
 const IconReceipt = ({ className = '', style }: { className?: string; style?: React.CSSProperties }) => (
   <svg viewBox="0 0 24 24" fill="none" className={className} style={style}>
@@ -3675,7 +3855,7 @@ export default function AdminDashboardPage() {
     return totalAdv;
   };
 
-  // --- CONSUMPTION TAB: REAL vs THEORETICAL PER DAY ---
+  // --- CONSUMPTION HELPERS ---
   const getInventoryValue = (targetClosure: any, matchList: string[]) => {
     if (!targetClosure) return 0;
     const logs = targetClosure.inventory_logs || targetClosure.inventory || [];
@@ -3696,32 +3876,6 @@ export default function AdminDashboardPage() {
     });
     return Number(item?.quantity || 0);
   };
-
-  const consumptionRows = filteredClosures.map((closure) => {
-    const bDate = closure.business_date || closure.businessDate || closure.date;
-
-    // Find the closure immediately before this one, searched across ALL closures
-    // (not just the filtered month) so the 1st of the month still gets an opening stock.
-    const prevClosure = closures
-      .filter(c => (c.business_date || c.businessDate || c.date) < bDate)
-      .sort((a, b) => new Date(b.business_date || b.businessDate || b.date).getTime() - new Date(a.business_date || a.businessDate || a.date).getTime())[0];
-
-    const consumptionRecord = consumptionRecords.find(r => String(r.record_date || '') === bDate);
-
-    const items = CONSUMPTION_ITEMS.map((def) => {
-      const opening = getInventoryValue(prevClosure, def.match);
-      const supplyQty = getSupplyValueForDate(bDate, def.match);
-      const closing = getInventoryValue(closure, def.match);
-      const actual = opening + supplyQty - closing;
-      const theoretical = consumptionRecord ? Number(consumptionRecord[def.theoreticalField] ?? 0) : null;
-      const variance = theoretical !== null ? actual - theoretical : null;
-      const ratio = theoretical && theoretical > 0 ? Math.abs(variance || 0) / theoretical : 0;
-      const flagged = theoretical !== null && ratio > VARIANCE_FLAG_RATIO;
-      return { code: def.code, label: def.label, actual, theoretical, variance, flagged };
-    });
-
-    return { date: bDate, hasConsumptionData: !!consumptionRecord, items };
-  });
 
   const totalFixedExpenses = fixedExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
   const totalBaseSalaries = staffSalaries.reduce((sum, s) => sum + (Number(s.baseSalary) || 0), 0);
@@ -4268,64 +4422,130 @@ export default function AdminDashboardPage() {
 
             {/* ============================= TAB: CONSOMMATION ============================= */}
             {activeTab === 'consumption' && (
-              <Card className="space-y-4">
-                <SectionEyebrow accent="slate">Vérification Quotidienne</SectionEyebrow>
-                <div className="flex justify-between items-center flex-wrap gap-2">
-                  <h3 className="text-base font-semibold font-display" style={{ color: TEXT_PRIMARY }}>Consommation Réelle vs Théorique</h3>
-                  <span className="text-xs" style={{ color: TEXT_FAINT }}>Réel = Stock + Achats − Reste · Théorique = calculé depuis les ventes (Salem)</span>
+              <Card className="space-y-6">
+                <div className="flex justify-between items-center flex-wrap gap-4">
+                  <div>
+                    <SectionEyebrow accent="slate">Audit de Consommation</SectionEyebrow>
+                    <h3 className="text-lg font-semibold font-display" style={{ color: TEXT_PRIMARY }}>
+                      Comparaison : Réel (Tayeb) vs Théorique (Salem)
+                    </h3>
+                  </div>
                 </div>
 
-                {consumptionRows.length > 0 ? (
-                  <div className="overflow-auto max-h-[600px] rounded-xl" style={{ border: `1px solid ${HAIRLINE}` }}>
-                    <table className="w-full text-left text-sm">
-                      <thead className="sticky top-0 z-10" style={{ background: SURFACE }}>
-                        <tr className="text-[11px] uppercase tracking-wide" style={{ color: TEXT_FAINT }}>
-                          <th className="py-3 px-3 font-bold">Date</th>
-                          {CONSUMPTION_ITEMS.map(def => (
-                            <th key={def.code} className="py-3 px-3 font-bold text-center">{def.label}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {consumptionRows.map((row) => (
-                          <tr key={row.date} className="transition-colors hover:bg-white/[0.02]" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
-                            <td className="py-3 px-3 font-semibold" style={{ color: TEXT_PRIMARY }}>{row.date}</td>
-                            {row.items.map((item) => (
-                              <td key={item.code} className="py-3 px-3 text-center font-num">
-                                {item.theoretical === null ? (
-                                  <span style={{ color: TEXT_FAINT }}>{item.actual.toFixed(2)}</span>
-                                ) : (
-                                  <div className="flex flex-col items-center">
-                                    <span className="font-bold" style={{ color: item.flagged ? NEG : TEXT_PRIMARY }}>
-                                      {item.actual.toFixed(2)} {item.flagged && '⚠'}
-                                    </span>
-                                    <span className="text-[10px]" style={{ color: TEXT_FAINT }}>
-                                      théo: {item.theoretical.toFixed(2)}
-                                    </span>
-                                  </div>
-                                )}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                {filteredClosures.length > 0 ? (
+                  <div className="space-y-6">
+                    {/* Date Selector for Detailed View */}
+                    <div className="flex items-center gap-3 p-4 rounded-xl" style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE}` }}>
+                      <span className="text-xs font-bold uppercase tracking-wider" style={{ color: TEXT_FAINT }}>Sélectionner une Date :</span>
+                      <select
+                        value={selectedClosureDate || ''}
+                        onChange={(e) => {
+                          const found = filteredClosures.find(c => (c.business_date || c.businessDate || c.date) === e.target.value);
+                          setSelectedClosure(found || null);
+                        }}
+                        className="bg-transparent text-sm font-bold outline-none cursor-pointer p-2 rounded-lg"
+                        style={{ background: SURFACE, color: TEXT_PRIMARY, border: `1px solid ${HAIRLINE_STRONG}` }}
+                      >
+                        {filteredClosures.map(c => {
+                          const d = c.business_date || c.businessDate || c.date;
+                          return <option key={d} value={d}>{d}</option>;
+                        })}
+                      </select>
+                    </div>
+
+                    {/* Detailed Comparison Table for Selected Date */}
+                    {(() => {
+                      const activeDate = selectedClosureDate || (filteredClosures[0] ? (filteredClosures[0].business_date || filteredClosures[0].businessDate || filteredClosures[0].date) : null);
+                      if (!activeDate) return <p className="text-sm text-center py-8" style={{ color: TEXT_FAINT }}>Aucune date sélectionnée.</p>;
+
+                      const closureObj = filteredClosures.find(c => (c.business_date || c.businessDate || c.date) === activeDate);
+                      const prevClosureObj = closures
+                        .filter(c => (c.business_date || c.businessDate || c.date) < activeDate)
+                        .sort((a, b) => new Date(b.business_date || b.businessDate || b.date).getTime() - new Date(a.business_date || a.businessDate || a.date).getTime())[0];
+                      
+                      const consumptionRec = consumptionRecords.find(r => String(r.record_date || '') === activeDate);
+
+                      return (
+                        <div className="space-y-4">
+                          <div className="overflow-auto rounded-xl" style={{ border: `1px solid ${HAIRLINE}` }}>
+                            <table className="w-full text-left text-sm">
+                              <thead style={{ background: SURFACE }}>
+                                <tr className="text-[11px] uppercase tracking-wide" style={{ color: TEXT_FAINT }}>
+                                  <th className="py-3 px-4 font-bold">Article</th>
+                                  <th className="py-3 px-4 font-bold text-center">Réel Consommé (Tayeb)</th>
+                                  <th className="py-3 px-4 font-bold text-center">Théorique (Ventes Salem)</th>
+                                  <th className="py-3 px-4 font-bold text-center">Différence (Écart)</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {CONSUMPTION_ITEMS.map((def) => {
+                                  const opening = getInventoryValue(prevClosureObj, def.match);
+                                  const supplyQty = getSupplyValueForDate(activeDate, def.match);
+                                  const closing = getInventoryValue(closureObj, def.match);
+                                  
+                                  // Réel = Stock Précédent + Achats - Reste physique
+                                  const actualConsumed = opening + supplyQty - closing;
+                                  
+                                  // Théorique depuis Salem
+                                  const theoretical = consumptionRec ? Number(consumptionRec[def.theoreticalField] ?? 0) : null;
+                                  
+                                  const variance = theoretical !== null ? actualConsumed - theoretical : null;
+                                  const ratio = theoretical && theoretical > 0 ? Math.abs(variance || 0) / theoretical : 0;
+                                  const isFlagged = theoretical !== null && ratio > VARIANCE_FLAG_RATIO;
+
+                                  return (
+                                    <tr key={def.code} className="transition-colors hover:bg-white/[0.02]" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
+                                      <td className="py-3 px-4 font-semibold" style={{ color: TEXT_PRIMARY }}>{def.label}</td>
+                                      
+                                      {/* Tayeb Real Consumption */}
+                                      <td className="py-3 px-4 text-center font-num font-bold" style={{ color: TEXT_PRIMARY }}>
+                                        {actualConsumed.toFixed(2)}
+                                      </td>
+
+                                      {/* Salem Theoretical Sales-based Consumption */}
+                                      <td className="py-3 px-4 text-center font-num font-medium" style={{ color: TEXT_MUTED }}>
+                                        {theoretical !== null ? theoretical.toFixed(2) : <span className="italic text-xs" style={{ color: TEXT_FAINT }}>Non saisi par Salem</span>}
+                                      </td>
+
+                                      {/* Difference / Variance */}
+                                      <td className="py-3 px-4 text-center font-num font-bold">
+                                        {variance !== null ? (
+                                          <span className="px-2.5 py-1 rounded-lg text-xs" style={{
+                                            background: isFlagged ? ACCENT.clay.soft : SURFACE_2,
+                                            color: isFlagged ? NEG : POS,
+                                            border: `1px solid ${isFlagged ? ACCENT.clay.hex + '40' : HAIRLINE}`
+                                          }}>
+                                            {variance > 0 ? `+${variance.toFixed(2)}` : variance.toFixed(2)} {isFlagged && '⚠'}
+                                          </span>
+                                        ) : (
+                                          <span style={{ color: TEXT_FAINT }}>—</span>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                          <p className="text-xs" style={{ color: TEXT_FAINT }}>
+                            * Légende : La différence indique l'écart entre le stock réellement sorti de l'inventaire de Tayeb et ce que les ventes de Salem justifient. Un écart supérieur à 10% (marqué ⚠) indique une divergence potentielle.
+                          </p>
+                        </div>
+                      );
+                    })()}
                   </div>
                 ) : (
-                  <p className="text-sm text-center py-12" style={{ color: TEXT_FAINT }}>Aucune donnée pour ce mois.</p>
+                  <p className="text-sm text-center py-12" style={{ color: TEXT_FAINT }}>Aucune clôture disponible pour ce mois.</p>
                 )}
-
-                <p className="text-xs" style={{ color: TEXT_FAINT }}>
-                  ⚠ = écart de plus de 10% entre consommation théorique (ventes de Salem) et réelle (stock physique de Tayeb). Les jours sans "théo" n'ont pas encore de saisie de consommation.
-                </p>
               </Card>
             )}
+
           </>
         )}
       </div>
 
       {/* ============================= CLOSURE DETAILS MODAL ============================= */}
-      {selectedClosure && (
+      {selectedClosure && activeTab === 'closures' && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl space-y-6" style={{ background: SURFACE, border: `1px solid ${HAIRLINE_STRONG}` }}>
             <div className="flex justify-between items-center pb-4" style={{ borderBottom: `1px solid ${HAIRLINE}` }}>

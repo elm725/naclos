@@ -14,7 +14,9 @@ const CORE_STOCK_ITEMS = [
   { code: 'eau_g', label: 'Eau (Grande)', unit: 'unit' },
   { code: 'fruit_de_mer', label: 'Fruits de Mer', unit: 'kg' },
 ];
-
+const KG_TO_PCS_FACTOR: Record<string, number> = {
+  crispy: 10, // 1 kg of crispy = 10 pieces
+};
 export default function SupplyEntryPage() {
   const router = useRouter();
 
@@ -43,12 +45,16 @@ export default function SupplyEntryPage() {
     setLoading(true);
     setMessage(null);
     
-    const itemsBought = CORE_STOCK_ITEMS.map(item => ({
-      code: item.code,
-      label: item.label,
-      quantity: Number(supplies[item.code]) || 0,
-      unit: item.unit
-    })).filter(i => i.quantity > 0);
+   const itemsBought = CORE_STOCK_ITEMS.map(item => {
+  const rawQty = Number(supplies[item.code]) || 0;
+  const factor = KG_TO_PCS_FACTOR[item.code];
+  return {
+    code: item.code,
+    label: item.label,
+    quantity: factor ? rawQty * factor : rawQty,
+    unit: factor ? 'pcs' : item.unit,
+  };
+}).filter(i => i.quantity > 0);
 
     try {
       const res = await fetch('/api/supply', {
