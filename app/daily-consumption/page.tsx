@@ -132,7 +132,7 @@ export default function DailyConsumptionPage() {
     1000;
 
   // Mozzarella (kg)
-  const mozzKg = 0.12 * (totalPizzaM + totalGratins) + 0.06 * totalPizzaS;
+  const mozzKg = 0.12 * (totalPizzaM + totalGratins) + 0.08 * totalPizzaS;
 
   // Crispy (Pieces)
   const crispyKg =

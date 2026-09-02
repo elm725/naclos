@@ -26,7 +26,7 @@ export default function WelcomePage() {
       sessionStorage.setItem('naclos_authenticated', 'true');
       sessionStorage.setItem('naclos_role', 'noureddine');
       router.push('/daily-report');
-    } else if (pin === '9999') {
+    } else if (pin === '2005') {
       sessionStorage.setItem('naclos_authenticated', 'true');
       sessionStorage.setItem('naclos_role', 'admin');
       setAuthRole('admin');
