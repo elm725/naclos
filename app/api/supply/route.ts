@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({ closureId: existingClosure.id }),
       }).catch(console.error);
     } else {
-      console.log("Closure not yet submitted. Waiting for Tayeb to trigger the email.");
+      console.log("Closure not yet submitted. Waiting for mohamed to trigger the email.");
     }
 
     return NextResponse.json({ success: true });

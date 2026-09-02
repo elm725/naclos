@@ -6,16 +6,16 @@ import { useRouter } from 'next/navigation';
 export default function WelcomePage() {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
-  const [authRole, setAuthRole] = useState<'tayeb' | 'admin' | null>(null);
+  const [authRole, setAuthRole] = useState<'mohamed' | 'admin' | null>(null);
   const router = useRouter();
 
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (pin === '1234') {
+    if (pin === '2222') {
       sessionStorage.setItem('naclos_authenticated', 'true');
-      sessionStorage.setItem('naclos_role', 'tayeb');
+      sessionStorage.setItem('naclos_role', 'mohamed');
       router.push('/entry');
     } else if (pin === '1111') {
       sessionStorage.setItem('naclos_authenticated', 'true');

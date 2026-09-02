@@ -18,17 +18,17 @@ const CORE_STOCK_ITEMS = [
 
 const PREDEFINED_EXPENSES = ['Fournisseur', 'Frite', 'VH', 'Chikas', 'Salem', 'Autre...'];
 
-const STORAGE_KEY = 'naclos_tayeb_form_draft_v1';
+const STORAGE_KEY = 'naclos_mohamed_form_draft_v1';
 
 export default function DailyEntryForm() {
   const router = useRouter();
-  const managerName = 'Tayeb';
+  const managerName = 'mohammed';
 
   // SECURITY GUARD
   useEffect(() => {
     const authRole = sessionStorage.getItem('naclos_role');
     const isAuth = sessionStorage.getItem('naclos_authenticated');
-    if (isAuth !== 'true' || (authRole !== 'tayeb' && authRole !== 'admin')) {
+    if (isAuth !== 'true' || (authRole !== 'mohamed' && authRole !== 'admin')) {
       router.push('/');
     }
   }, [router]);

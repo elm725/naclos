@@ -160,7 +160,7 @@ export default function AdminDashboardPage() {
   
   // --- PARTNER ADVANCES STATE ---
   const [partnerAdvances, setPartnerAdvances] = useState<any[]>([]);
-  const [newAdvancePartner, setNewAdvancePartner] = useState<'Tayeb' | 'Noureddine'>('Noureddine');
+  const [newAdvancePartner, setNewAdvancePartner] = useState<'mohamed' | 'Noureddine'>('Noureddine');
   const [newAdvanceAmount, setNewAdvanceAmount] = useState<number | ''>('');
   const [newAdvanceDate, setNewAdvanceDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [newAdvanceNote, setNewAdvanceNote] = useState('');
@@ -472,13 +472,13 @@ export default function AdminDashboardPage() {
   partnerAdvances.forEach((a) => {
     partnerAdvanceTotals[a.partner_name] = (partnerAdvanceTotals[a.partner_name] || 0) + (Number(a.amount) || 0);
   });
-  const tayebPartnerAdvances = partnerAdvanceTotals['Tayeb'] || 0;
+  const mohamedPartnerAdvances = partnerAdvanceTotals['mohamed'] || 0;
   const noureddinePartnerAdvances = partnerAdvanceTotals['Noureddine'] || 0;
 
-  const tayebAdvances = getStaffAdvance('Tayeb');
+  const mohamedAdvances = getStaffAdvance('mohamed');
   
   const noureddineShare = (monthlyNetProfit / 2) - noureddinePartnerAdvances;
-  const tayebShare = (monthlyNetProfit / 2) - tayebAdvances - tayebPartnerAdvances;
+  const mohamedShare = (monthlyNetProfit / 2) - mohamedAdvances - mohamedPartnerAdvances;
 
   const selectedClosureDate = selectedClosure ? (selectedClosure.business_date || selectedClosure.businessDate || selectedClosure.date) : null;
   const selectedClosureAttempts = selectedClosureDate
@@ -991,7 +991,7 @@ export default function AdminDashboardPage() {
               <Card>
                 <h3 className="text-base font-semibold mb-5 flex items-center justify-between font-display" style={{ color: TEXT_PRIMARY }}>
                   <span>Partage des Parts (50% / 50%)</span>
-                  <span className="text-xs px-3 py-1 rounded-full" style={{ background: ACCENT.clay.soft, color: ACCENT.clay.hex, border: `1px solid ${ACCENT.clay.hex}30` }}>Mr. Noureddine & Tayeb</span>
+                  <span className="text-xs px-3 py-1 rounded-full" style={{ background: ACCENT.clay.soft, color: ACCENT.clay.hex, border: `1px solid ${ACCENT.clay.hex}30` }}>Mr. Noureddine & mohamed</span>
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -1004,13 +1004,13 @@ export default function AdminDashboardPage() {
                   </div>
 
                   <div className="p-5 rounded-2xl space-y-1" style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE}` }}>
-                    <p className="text-xs uppercase tracking-wider font-bold" style={{ color: TEXT_FAINT }}>Part de Tayeb (50% − Avances)</p>
+                    <p className="text-xs uppercase tracking-wider font-bold" style={{ color: TEXT_FAINT }}>Part de mohamed (50% − Avances)</p>
                     <div className="flex items-baseline justify-between mt-1 gap-2 flex-wrap">
                       <p className="text-3xl font-bold font-num" style={{ color: POS }}>
-                        {tayebShare.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
+                        {mohamedShare.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
                       </p>
                       <span className="text-xs font-semibold px-2.5 py-1 rounded-lg font-num" style={{ background: ACCENT.clay.soft, color: ACCENT.clay.hex, border: `1px solid ${ACCENT.clay.hex}30` }}>
-                        Avances du mois : -{tayebAdvances.toLocaleString()} MAD
+                        Avances du mois : -{mohamedAdvances.toLocaleString()} MAD
                       </span>
                     </div>
                     <p className="text-xs" style={{ color: TEXT_FAINT }}>50% du bénéfice net moins ses avances de caisse et de partenariat</p>
@@ -1019,7 +1019,7 @@ export default function AdminDashboardPage() {
 
                 <div className="mt-5 pt-5 flex items-center justify-between text-xs" style={{ borderTop: `1px solid ${HAIRLINE}`, color: TEXT_FAINT }}>
                   <span>Basé sur le bénéfice net mensuel réel (Total net: {monthlyNetProfit.toLocaleString()} MAD)</span>
-                  <span className="font-num font-bold" style={{ color: TEXT_MUTED }}>Total Partage : {(noureddineShare + tayebShare).toLocaleString()} MAD</span>
+                  <span className="font-num font-bold" style={{ color: TEXT_MUTED }}>Total Partage : {(noureddineShare + mohamedShare).toLocaleString()} MAD</span>
                 </div>
 
                 <div className="mt-6 pt-6 space-y-4" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
@@ -1027,12 +1027,12 @@ export default function AdminDashboardPage() {
                   <div className="flex flex-wrap gap-2 items-center">
                     <select
                       value={newAdvancePartner}
-                      onChange={(e) => setNewAdvancePartner(e.target.value as 'Tayeb' | 'Noureddine')}
+                      onChange={(e) => setNewAdvancePartner(e.target.value as 'mohamed' | 'Noureddine')}
                       className="p-2.5 rounded-xl text-sm font-semibold outline-none"
                       style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE_STRONG}`, color: TEXT_PRIMARY }}
                     >
                       <option value="Noureddine">Noureddine</option>
-                      <option value="Tayeb">Tayeb</option>
+                      <option value="mohamed">mohamed</option>
                     </select>
                     <input
                       type="date" value={newAdvanceDate} onChange={(e) => setNewAdvanceDate(e.target.value)}
@@ -1133,7 +1133,7 @@ export default function AdminDashboardPage() {
                 )}
 
                 <p className="text-xs" style={{ color: TEXT_FAINT }}>
-                  ⚠ = écart de plus de 10% entre consommation théorique (ventes de Salem) et réelle (stock physique de Tayeb). Les jours sans "théo" n'ont pas encore de saisie de consommation.
+                  ⚠ = écart de plus de 10% entre consommation théorique (ventes de Salem) et réelle (stock physique de mohamed). Les jours sans "théo" n'ont pas encore de saisie de consommation.
                 </p>
               </Card>
             )}
