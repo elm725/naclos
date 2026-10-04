@@ -20,7 +20,7 @@ export interface StaffAdvanceEntry {
 
 export interface InventoryEntry {
   id?: string;
-  materialCode: string;         // e.g. 'dinde', 'vh', 'mozzarella'
+  materialCode: string;         // e.g. 'poulet', 'vh', 'mozzarella'
   materialLabel: string;
   unit: 'kg' | 'unit' | 'pack' | 'bag' | 'can';
   openingStock: number;
@@ -69,7 +69,7 @@ export interface InventoryVarianceFlag {
   materialLabel: string;
   variance: number;         // negative = missing stock
   unit: string;
-  message: string;          // e.g. "Manque 500g Dinde"
+  message: string;          // e.g. "Manque 500g Poulet"
 }
 
 export interface DashboardSummary {
@@ -107,7 +107,7 @@ export const EXPENSE_CATEGORIES: Array<{ code: string; label: string }> = [
 ];
 
 export const RAW_MATERIALS: Array<{ code: string; label: string; unit: InventoryEntry['unit'] }> = [
-  { code: 'dinde', label: 'Dinde (Turkey Breast)', unit: 'kg' },
+  { code: 'poulet', label: 'Poulet (Turkey Breast)', unit: 'kg' },
   { code: 'vh', label: 'Viande Hachée', unit: 'kg' },
   { code: 'mozzarella', label: 'Mozzarella', unit: 'kg' },
   { code: 'crispy_chicken', label: 'Crispy Chicken', unit: 'kg' },
@@ -122,15 +122,17 @@ export const RAW_MATERIALS: Array<{ code: string; label: string; unit: Inventory
   { code: 'fruits_de_mer', label: 'Fruits de Mer', unit: 'kg' },
   { code: 'thon', label: 'Thon', unit: 'kg' },
   { code: 'jambon', label: 'Jambon', unit: 'kg' },
+  { code: 'chicken_wings', label: 'Chicken Wings', unit: 'kg' },
+  { code: 'legumes', label: 'Légumes', unit: 'kg' }
 ];
 
 export const MENU_CATALOG: Array<{ categoryCode: string; categoryLabel: string; items: string[] }> = [
-  { categoryCode: 'tacos', categoryLabel: 'Tacos', items: ['Dinde', 'Fried Chicken', 'Kefta', 'Mixte'] },
+  { categoryCode: 'tacos', categoryLabel: 'Tacos', items: ['Poulet', 'Fried Chicken', 'Kefta', 'Mixte'] },
   { categoryCode: 'burgers', categoryLabel: 'Burgers', items: ['Hamburger', 'Chicken Burger', 'Cheese Burger', 'Double Cheese Burger'] },
   { categoryCode: 'pizza_p', categoryLabel: 'Pizza Petite', items: ['Viande Hachée', 'Margarita', 'Poulet', 'Thon', 'Naclos', 'Fruit de Mer'] },
   { categoryCode: 'pizza_m', categoryLabel: 'Pizza Moyenne', items: ['Viande Hachée', 'Margarita', 'Poulet', 'Thon', 'Naclos', 'Fruit de Mer'] },
   { categoryCode: 'gratins', categoryLabel: 'Gratins', items: ['Poulet', 'Jambon', 'Viande Hachée', 'Mixte'] },
-  { categoryCode: 'italien', categoryLabel: 'Italien / Pâtes', items: ['Dinde', 'Fried Chicken', 'Kefta', 'Mixte'] },
+  { categoryCode: 'italien', categoryLabel: 'Italien / Pâtes', items: ['Poulet', 'Fried Chicken', 'Kefta', 'Mixte'] },
   { categoryCode: 'jus', categoryLabel: 'Jus Naturels', items: ['Orange', 'Ananas', 'Mangue', 'Avocat', 'Panaché', 'Tiramisu'] },
   { categoryCode: 'boissons', categoryLabel: 'Boissons & Supports', items: ['Soda', 'Eau P', 'Eau G', 'Frites Extra', 'Lben', 'Sauces'] },
 ];

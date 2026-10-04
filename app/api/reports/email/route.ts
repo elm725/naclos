@@ -5,15 +5,19 @@ import { getSupabaseAdminClient } from '@/lib/supabaseClient';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const TRACKED_COLUMNS = [
-  { id: 'dinde', label: 'DINDE', isKg: true, match: ['dinde'] },
+  { id: 'poulet', label: 'POULET', isKg: true, match: ['poulet'] },
   { id: 'vh', label: 'VH', isKg: true, match: ['vh', 'viande hachée'] },
   { id: 'mozz', label: 'MOZZ', isKg: true, match: ['mozzarella', 'mozarella'] },
   { id: 'crispy', label: 'CRISPY', isKg: true, match: ['crispy', 'crispy_chicken'] },
+  { id: 'wings', label: 'WINGS', isKg: true, match: ['wings', 'chicken_wings'] },
+  { id: 'legume', label: 'LÉGUMES', isKg: true, match: ['legume', 'legumes', 'légume'] },
   { id: 'tortilla', label: 'TORTILLA', isKg: false, match: ['tortilla'] },
   { id: 'burger', label: 'BURGER', isKg: false, match: ['burger', 'burger_buns'] },
   { id: 'soda', label: 'SODA', isKg: false, match: ['soda', 'soda_cans'] },
   { id: 'eau_p', label: 'EAU P', isKg: false, match: ['eau_p', 'eau_petite'] },
-  { id: 'eau_g', label: 'EAU G', isKg: false, match: ['eau_g', 'eau_grande'] }
+  { id: 'eau_g', label: 'EAU G', isKg: false, match: ['eau_g', 'eau_grande'] },
+  { id: 'frite', label: 'FRITE', isKg: true, match: ['frite_kg', 'frite'] },
+  { id: 'mangue_ananas', label: 'MANGUE/ANANAS', isKg: false, match: ['mangue_ananas'] },
 ];
 
 export async function POST(request: NextRequest) {

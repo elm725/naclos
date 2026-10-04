@@ -3,8 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 import { monthRange } from '@/lib/Daterange';
 export const dynamic = 'force-dynamic'; // <-- ADD THIS LINE
 
-
-
 // Initialize Supabase client for the server route
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!; 
@@ -32,10 +30,12 @@ export async function POST(request: Request) {
       .from('daily_consumption_records')
       .insert([
         {
-          theoretical_dinde_kg: data.dindeKg,
+          theoretical_poulet_kg: data.pouletKg,
           theoretical_vh_kg: data.vhKg,
           theoretical_mozzarella_kg: data.mozzKg,
           theoretical_crispy_pcs: data.crispyKg, 
+          theoretical_wings_kg: data.wingsKg,
+          theoretical_legume_kg: data.legumesKg,
           theoretical_tortillas_pcs: data.totalTortillas,
           theoretical_buns_pcs: data.totalBurgers,
           record_date: targetDate, // Force the database to use Salem's selected date

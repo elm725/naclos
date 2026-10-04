@@ -42,12 +42,12 @@ export default function DailyConsumptionPage() {
     pizzaM_thon: 0,
     pizzaM_fruit_de_mer: 0,
     // Tacos
-    tacos_dinde: 0,
+    tacos_poulet: 0,
     tacos_fried_chicken: 0,
     tacos_kefta: 0,
     tacos_mixte: 0,
     // Italien
-    italien_dinde: 0,
+    italien_poulet: 0,
     italien_fried_chicken: 0,
     italien_kefta: 0,
     italien_mixte: 0,
@@ -65,6 +65,9 @@ export default function DailyConsumptionPage() {
     burger_chicken_double: 0,
     // Suppléments
     sup_poulet: 0,
+    // Added Manual Kg Values
+    wings_kg: 0,
+    legumes_kg: 0,
   });
 
   const handleChange = (field: string, value: string) => {
@@ -100,16 +103,16 @@ export default function DailyConsumptionPage() {
   const doubleBeefBurgers = sales.burger_vh_double;
   const totalBeefBurgers = singleBeefBurgers + doubleBeefBurgers;
 
-  // Dinde (kg)
-  const dindeKg =
-    (100 * (sales.pizzaM_poulet + sales.italien_dinde + sales.gratin_poulet + sales.sup_poulet) +
+  // Poulet (kg)
+  const pouletKg =
+    (100 * (sales.pizzaM_poulet + sales.italien_poulet + sales.gratin_poulet + sales.sup_poulet) +
       50 *
         (sales.pizzaS_poulet +
           sales.pizzaM_naclos +
           sales.tacos_mixte +
           sales.italien_mixte +
           sales.gratin_mixte) +
-      120 * sales.tacos_dinde +
+      120 * sales.tacos_poulet +
       25 * sales.pizzaS_naclos) /
     1000;
 
@@ -143,7 +146,7 @@ export default function DailyConsumptionPage() {
 
   // Units
   const totalTortillas =
-    sales.tacos_dinde + sales.tacos_fried_chicken + sales.tacos_kefta + sales.tacos_mixte;
+    sales.tacos_poulet + sales.tacos_fried_chicken + sales.tacos_kefta + sales.tacos_mixte;
   const totalBurgers = totalBeefBurgers + totalChickenBurgers;
 
   // --- Submission Flow ---
@@ -162,10 +165,12 @@ export default function DailyConsumptionPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           businessDate,
-          dindeKg,
+          pouletKg,
           vhKg,
           mozzKg,
           crispyKg,
+          wingsKg: sales.wings_kg,
+          legumesKg: sales.legumes_kg,
           totalTortillas,
           totalBurgers,
         }),
@@ -262,12 +267,14 @@ export default function DailyConsumptionPage() {
         )}
 
         {/* Live Summary Cards */}
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-3">
           {[
-            { label: 'DINDE', val: dindeKg.toFixed(2), unit: 'kg', color: 'text-blue-600' },
+            { label: 'POULET', val: pouletKg.toFixed(2), unit: 'kg', color: 'text-blue-600' },
             { label: 'VH', val: vhKg.toFixed(2), unit: 'kg', color: 'text-red-600' },
             { label: 'MOZZARELLA', val: mozzKg.toFixed(2), unit: 'kg', color: 'text-amber-500' },
             { label: 'CRISPY', val: crispyKg.toFixed(1), unit: 'pcs', color: 'text-orange-600' },
+            { label: 'WINGS', val: sales.wings_kg.toFixed(2), unit: 'kg', color: 'text-orange-600' },
+            { label: 'LÉGUMES', val: sales.legumes_kg.toFixed(2), unit: 'kg', color: 'text-emerald-600' },
             { label: 'TORTILLAS', val: totalTortillas, unit: 'pcs', color: 'text-emerald-600' },
             { label: 'BUNS', val: totalBurgers, unit: 'pcs', color: 'text-emerald-600' },
           ].map((stat, idx) => (
@@ -284,12 +291,12 @@ export default function DailyConsumptionPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
             <h2 className="font-bold text-gray-800 border-b pb-2 mb-3">🌮 Tacos & Italien</h2>
-            <InputRow label="Tacos Dinde" field="tacos_dinde" />
+            <InputRow label="Tacos Poulet" field="tacos_poulet" />
             <InputRow label="Tacos Poulet Frit" field="tacos_fried_chicken" />
             <InputRow label="Tacos Kefta" field="tacos_kefta" />
             <InputRow label="Tacos Mixte" field="tacos_mixte" />
             <div className="my-2 border-t border-gray-100"></div>
-            <InputRow label="Italien Dinde" field="italien_dinde" />
+            <InputRow label="Italien Poulet" field="italien_poulet" />
             <InputRow label="Italien Poulet Frit" field="italien_fried_chicken" />
             <InputRow label="Italien Kefta" field="italien_kefta" />
             <InputRow label="Italien Mixte" field="italien_mixte" />
@@ -330,12 +337,20 @@ export default function DailyConsumptionPage() {
             </div>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
-            <h2 className="font-bold text-gray-800 border-b pb-2 mb-3">🥘 Gratins</h2>
-            <InputRow label="Gratin Poulet" field="gratin_poulet" />
-            <InputRow label="Gratin Viande Hachée" field="gratin_vh" />
-            <InputRow label="Gratin Jambon" field="gratin_jambon" />
-            <InputRow label="Gratin Mixte" field="gratin_mixte" />
+          <div className="space-y-4">
+            <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+              <h2 className="font-bold text-gray-800 border-b pb-2 mb-3">🥘 Gratins</h2>
+              <InputRow label="Gratin Poulet" field="gratin_poulet" />
+              <InputRow label="Gratin Viande Hachée" field="gratin_vh" />
+              <InputRow label="Gratin Jambon" field="gratin_jambon" />
+              <InputRow label="Gratin Mixte" field="gratin_mixte" />
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+              <h2 className="font-bold text-gray-800 border-b pb-2 mb-3">🍗 Autres Consommations</h2>
+              <InputRow label="Chicken Wings (Kg)" field="wings_kg" />
+              <InputRow label="Légumes (Kg)" field="legumes_kg" />
+            </div>
           </div>
         </div>
 

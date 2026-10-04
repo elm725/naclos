@@ -94,13 +94,16 @@ const POS = '#7FA98A';
 const NEG = '#B1806F';
 
 const CONSUMPTION_ITEMS: { code: string; label: string; theoreticalField: string; match: string[] }[] = [
-  { code: 'dinde', label: 'Dinde', theoreticalField: 'theoretical_dinde_kg', match: ['dinde'] },
+  { code: 'poulet', label: 'Poulet', theoreticalField: 'theoretical_poulet_kg', match: ['poulet'] },
   { code: 'vh', label: 'VH', theoreticalField: 'theoretical_vh_kg', match: ['vh', 'viande hachée'] },
   { code: 'mozzarella', label: 'Mozzarella', theoreticalField: 'theoretical_mozzarella_kg', match: ['mozzarella', 'mozarella'] },
   { code: 'crispy', label: 'Crispy', theoreticalField: 'theoretical_crispy_pcs', match: ['crispy'] },
+  { code: 'wings', label: 'Wings', theoreticalField: 'theoretical_wings_kg', match: ['wings', 'chicken_wings'] },
+  { code: 'legume', label: 'Légumes', theoreticalField: 'theoretical_legume_kg', match: ['legume', 'legumes', 'légume'] },
   { code: 'tortilla', label: 'Tortillas', theoreticalField: 'theoretical_tortillas_pcs', match: ['tortilla'] },
   { code: 'burger', label: 'Buns', theoreticalField: 'theoretical_buns_pcs', match: ['burger'] },
 ];
+
 const VARIANCE_FLAG_RATIO = 0.1;
 
 function SectionEyebrow({ accent, children }: { accent: AccentKey; children: React.ReactNode }) {
@@ -339,7 +342,18 @@ export default function AdminDashboardPage() {
   const daysCount = filteredClosures.length || 1;
   const avgDailyRevenue = totalRevenue / daysCount;
   const avgDailyExpenses = totalExpenses / daysCount;
-  const expenseRatio = totalRevenue > 0 ? ((totalExpenses / totalRevenue) * 100).toFixed(1) : '0';
+  
+  // Derived calculations for the new UI
+  const grossProfit = totalRevenue - totalExpenses;
+  const dailyExpenseRatio = totalRevenue > 0 ? ((totalExpenses / totalRevenue) * 100).toFixed(2) : '0';
+  
+  const totalFixedExpenses = fixedExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+  const totalBaseSalaries = staffSalaries.reduce((sum, s) => sum + (Number(s.baseSalary) || 0), 0);
+  const totalFixedAndSalaries = totalFixedExpenses + totalBaseSalaries;
+  
+  const totalOverallExpenses = totalExpenses + totalFixedExpenses + totalBaseSalaries;
+  const monthlyNetProfit = grossProfit - totalFixedAndSalaries;
+  const monthlyExpenseRatio = totalRevenue > 0 ? ((totalOverallExpenses / totalRevenue) * 100).toFixed(1) : '0';
 
   const maxDay = filteredClosures.reduce((max, c) => {
     const rev = Number(c.gross_revenue ?? c.grossRevenue ?? c.total_revenue ?? c.totalRevenue) || 0;
@@ -376,7 +390,7 @@ export default function AdminDashboardPage() {
     ],
   };
 
-  const chartCoreItems = ['dinde', 'vh', 'viande hachée (vh)', 'mozarella', 'mozzarella', 'crispy'];
+  const chartCoreItems = ['poulet', 'vh', 'viande hachée (vh)', 'mozarella', 'mozzarella', 'crispy', 'wings', 'chicken_wings', 'legume', 'légumes', 'légume'];
   const inventoryVolumes: Record<string, number> = {};
   
   filteredSupplies.forEach(s => {
@@ -388,10 +402,12 @@ export default function AdminDashboardPage() {
       
       if (isAllowed) {
         let standardizedLabel = i.label || i.code;
-        if (cleanName.includes('dinde')) standardizedLabel = 'Dinde';
+        if (cleanName.includes('poulet')) standardizedLabel = 'Poulet';
         else if (cleanName.includes('vh') || cleanName.includes('viande hachée')) standardizedLabel = 'Viande Hachée (VH)';
         else if (cleanName.includes('mozarella') || cleanName.includes('mozzarella')) standardizedLabel = 'Mozzarella';
         else if (cleanName.includes('crispy')) standardizedLabel = 'Crispy';
+        else if (cleanName.includes('wing')) standardizedLabel = 'Chicken Wings';
+        else if (cleanName.includes('legume') || cleanName.includes('légume')) standardizedLabel = 'Légumes';
 
         inventoryVolumes[standardizedLabel] = (inventoryVolumes[standardizedLabel] || 0) + (Number(i.quantity) || 0);
       }
@@ -460,12 +476,6 @@ export default function AdminDashboardPage() {
 
     return { date: bDate, hasConsumptionData: !!consumptionRecord, items };
   });
-
-  const totalFixedExpenses = fixedExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
-  const totalBaseSalaries = staffSalaries.reduce((sum, s) => sum + (Number(s.baseSalary) || 0), 0);
-  const totalOverallExpenses = totalExpenses + totalFixedExpenses + totalBaseSalaries;
-  const monthlyNetProfit = totalRevenue - totalOverallExpenses;
-  const monthlyExpenseRatio = totalRevenue > 0 ? ((totalOverallExpenses / totalRevenue) * 100).toFixed(1) : '0';
 
   // --- DYNAMIC PARTNER CALCULATIONS WITH ADVANCE DEDUCTION ---
   const partnerAdvanceTotals: { [key: string]: number } = {};
@@ -605,7 +615,7 @@ export default function AdminDashboardPage() {
                   </Card>
                   <Card className="space-y-1">
                     <span className="text-xs font-bold uppercase tracking-wide" style={{ color: TEXT_FAINT }}>Ratio Dépenses (Quotidien)</span>
-                    <div className="text-2xl font-bold font-num" style={{ color: NEG }}>{expenseRatio}%</div>
+                    <div className="text-2xl font-bold font-num" style={{ color: NEG }}>{dailyExpenseRatio}%</div>
                     <p className="text-xs" style={{ color: TEXT_FAINT }}>Total dépenses : {totalExpenses.toLocaleString()} MAD</p>
                   </Card>
                   <Card className="space-y-1">
@@ -706,7 +716,7 @@ export default function AdminDashboardPage() {
                 <Card className="space-y-5">
                   <div>
                     <SectionEyebrow accent="slate">Approvisionnement</SectionEyebrow>
-                    <h3 className="text-base font-semibold font-display" style={{ color: TEXT_PRIMARY }}>Volume des Achats (Dinde, VH, Mozzarella, Crispy)</h3>
+                    <h3 className="text-base font-semibold font-display" style={{ color: TEXT_PRIMARY }}>Volume des Achats (Poulet, VH, Mozzarella, Crispy...)</h3>
                   </div>
                   {Object.keys(inventoryVolumes).length > 0 ? (
                     <div className="h-[320px]">
@@ -781,127 +791,117 @@ export default function AdminDashboardPage() {
 
             {/* ============================= TAB: BILAN MENSUEL ============================= */}
             {activeTab === 'summary' && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-                <div className="lg:col-span-7 space-y-5">
-                  <Card className="space-y-4">
-                    <SectionEyebrow accent="plum">Charges</SectionEyebrow>
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-base font-semibold font-display" style={{ color: TEXT_PRIMARY }}>Dépenses Fixes (Loyer, Électricité...)</h3>
-                      <button
-                        onClick={addFixedExpense}
-                        className="text-xs font-bold px-3 py-2 rounded-xl transition hover:opacity-80"
-                        style={{ background: ACCENT.plum.soft, color: ACCENT.plum.hex, border: `1px solid ${ACCENT.plum.hex}30` }}
-                      >
-                        + Ajouter Charge
-                      </button>
-                    </div>
-                    {fixedExpenses.length === 0 && <p className="text-xs italic" style={{ color: TEXT_FAINT }}>Ajoutez les charges fixes du mois pour le bilan final.</p>}
-                    <div className="space-y-3">
-                      {fixedExpenses.map(exp => (
-                        <div key={exp.id} className="flex gap-3 items-center">
-                          <input
-                            type="text" placeholder="Description de la charge" value={exp.label}
-                            onChange={e => updateFixedExpense(exp.id, 'label', e.target.value)}
-                            className="flex-1 p-2.5 rounded-xl text-sm font-semibold outline-none"
-                            style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE_STRONG}`, color: TEXT_PRIMARY }}
-                          />
-                          <input
-                            type="number" placeholder="Montant (MAD)" value={exp.amount === 0 ? '' : exp.amount}
-                            onChange={e => updateFixedExpense(exp.id, 'amount', e.target.value)}
-                            className="w-36 p-2.5 rounded-xl text-sm font-semibold font-num outline-none"
-                            style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE_STRONG}`, color: TEXT_PRIMARY }}
-                          />
-                          <button onClick={() => removeFixedExpense(exp.id)} className="p-2.5 rounded-xl font-bold transition hover:opacity-70" style={{ color: ACCENT.clay.hex }}>✕</button>
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
-
-                  <Card>
-                    <SectionEyebrow accent="plum">Aperçu Rapide</SectionEyebrow>
-                    <h3 className="text-base font-semibold font-display mb-3" style={{ color: TEXT_PRIMARY }}>Composition des Charges Globales</h3>
-                    <div className="space-y-3">
-                      {[
-                        { label: 'Achats & dépenses journalières', value: totalExpenses, color: ACCENT.clay.hex },
-                        { label: 'Masse salariale (base)', value: totalBaseSalaries, color: ACCENT.gold.hex },
-                        { label: 'Dépenses fixes mensuelles', value: totalFixedExpenses, color: ACCENT.plum.hex },
-                      ].map((row) => {
-                        const pct = totalOverallExpenses > 0 ? (row.value / totalOverallExpenses) * 100 : 0;
-                        return (
-                          <div key={row.label} className="space-y-1">
-                            <div className="flex justify-between text-xs font-semibold" style={{ color: TEXT_MUTED }}>
-                              <span>{row.label}</span>
-                              <span className="font-num">{row.value.toLocaleString()} MAD</span>
-                            </div>
-                            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: SURFACE_2 }}>
-                              <div className="h-full rounded-full" style={{ width: `${pct}%`, background: row.color }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </Card>
+              <div className="max-w-4xl mx-auto space-y-8">
+                
+                {/* Header Row */}
+                <div className="flex flex-col sm:flex-row justify-between items-center pb-4 border-b border-white/10 gap-4">
+                  <h2 className="text-xl md:text-2xl font-bold text-white font-display">Bilan Mensuel : <span className="text-[#8E80A8] capitalize">{monthLabel}</span></h2>
+                  <button 
+                    onClick={saveMonthlySummary} 
+                    disabled={isSavingSummary} 
+                    className="w-full sm:w-auto text-sm px-6 py-2.5 bg-[#8E80A8] text-[#131417] font-bold rounded-xl hover:opacity-90 transition disabled:opacity-50"
+                  >
+                    {isSavingSummary ? 'Sauvegarde...' : 'Sauvegarder Bilan'}
+                  </button>
                 </div>
 
-                <div
-                  className="lg:col-span-5 p-7 rounded-3xl flex flex-col justify-between space-y-7"
-                  style={{ background: SURFACE_2, border: `1px solid ${HAIRLINE_STRONG}` }}
-                >
-                  <div className="space-y-5">
-                    <div className="flex justify-between items-center pb-4" style={{ borderBottom: `1px solid ${HAIRLINE}` }}>
-                      <h3 className="text-base font-semibold tracking-wide font-display" style={{ color: ACCENT.plum.hex }}>Bilan Global Mensuel</h3>
-                      <span className="text-xs font-num px-3 py-1 rounded-full capitalize" style={{ background: ACCENT.plum.soft, color: ACCENT.plum.hex, border: `1px solid ${ACCENT.plum.hex}30` }}>{monthLabel}</span>
+                {/* SECTION 1: OPERATIONS (Gross Profit) */}
+                <div className="bg-[#131417] border border-white/10 rounded-2xl overflow-hidden shadow-lg">
+                  <div className="bg-[#191B1F] px-5 py-3.5 border-b border-white/10">
+                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">1. Opérations (Journalier)</h3>
+                  </div>
+                  <div className="p-0">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 sm:p-5 border-b border-white/5 gap-2">
+                      <span className="font-semibold text-gray-300">Chiffre d'Affaires (Revenus)</span>
+                      <span className="text-lg md:text-xl font-bold text-white font-num">{totalRevenue.toLocaleString('fr-FR')} MAD</span>
                     </div>
-
-                    <div className="flex justify-between items-center p-3.5 rounded-2xl" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                      <span className="text-sm font-medium" style={{ color: TEXT_MUTED }}>Recette Mensuelle (Brute)</span>
-                      <span className="font-num text-base font-bold" style={{ color: POS }}>+{totalRevenue.toLocaleString()} MAD</span>
-                    </div>
-
-                    <div className="space-y-2.5 pt-1">
-                      <div className="flex justify-between items-center text-sm px-1">
-                        <span style={{ color: TEXT_FAINT }}>Achats & Dépenses Journalières</span>
-                        <span className="font-num font-semibold" style={{ color: NEG }}>-{totalExpenses.toLocaleString()} MAD</span>
-                      </div>
-                      <div className="flex justify-between items-center text-sm px-1">
-                        <span style={{ color: TEXT_FAINT }}>Masse Salariale (Base)</span>
-                        <span className="font-num font-semibold" style={{ color: NEG }}>-{totalBaseSalaries.toLocaleString()} MAD</span>
-                      </div>
-                      <div className="flex justify-between items-center text-sm px-1">
-                        <span style={{ color: TEXT_FAINT }}>Dépenses Fixes Mensuelles</span>
-                        <span className="font-num font-semibold" style={{ color: NEG }}>-{totalFixedExpenses.toLocaleString()} MAD</span>
+                    
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 sm:p-5 border-b border-white/5 bg-red-900/10 gap-3">
+                      <span className="font-semibold text-gray-300">Achats & Dépenses Journalières</span>
+                      <div className="flex items-center gap-4 self-end sm:self-auto">
+                        <span className="text-xs px-2.5 py-1 rounded bg-[#2c4c3b] text-[#7FA98A] font-bold border border-[#7FA98A]/30">Ratio: {dailyExpenseRatio}%</span>
+                        <span className="text-lg md:text-xl font-bold text-[#e87c7c] font-num">-{totalExpenses.toLocaleString('fr-FR')} MAD</span>
                       </div>
                     </div>
-
-                    <div className="flex justify-between items-center pt-4 px-1" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
-                      <span className="text-sm font-bold" style={{ color: TEXT_MUTED }}>Total des Charges Globales</span>
-                      <span className="font-num text-base font-bold" style={{ color: NEG }}>-{totalOverallExpenses.toLocaleString()} MAD</span>
-                    </div>
-
-                    <div className="flex justify-between items-center p-3.5 rounded-2xl" style={{ background: 'rgba(0,0,0,0.3)' }}>
-                      <span className="text-sm" style={{ color: TEXT_FAINT }}>Ratio Global Dépenses / Recette</span>
-                      <span className="font-num font-bold text-base" style={{ color: ACCENT.gold.hex }}>{monthlyExpenseRatio}%</span>
+                    
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 sm:p-5 bg-green-900/10 gap-2">
+                      <span className="font-bold text-white uppercase tracking-wide">Bénéfice Brut (Opérationnel)</span>
+                      <span className="text-xl md:text-2xl font-black text-[#7FA98A] font-num">{grossProfit.toLocaleString('fr-FR')} MAD</span>
                     </div>
                   </div>
+                </div>
 
-                  <div className="space-y-4 pt-4" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
-                    <div className="p-6 rounded-2xl text-center" style={{ background: 'rgba(0,0,0,0.35)', border: `1px solid ${ACCENT.plum.hex}25` }}>
-                      <span className="block text-xs font-bold uppercase tracking-wider mb-1" style={{ color: TEXT_FAINT }}>Bénéfice Net Mensuel Réel</span>
-                      <span className="text-4xl font-bold font-num tracking-tight" style={{ color: monthlyNetProfit >= 0 ? POS : NEG }}>
-                        {monthlyNetProfit > 0 ? '+' : ''}{monthlyNetProfit.toLocaleString()} MAD
-                      </span>
-                    </div>
-
-                    <button
-                      onClick={saveMonthlySummary}
-                      disabled={isSavingSummary}
-                      className="w-full py-3.5 font-bold rounded-2xl transition disabled:opacity-50 text-sm tracking-wide hover:opacity-90"
-                      style={{ background: ACCENT.plum.hex, color: '#12121a' }}
+                {/* SECTION 2: CHARGES FIXES & SALAIRES */}
+                <div className="bg-[#131417] border border-white/10 rounded-2xl overflow-hidden shadow-lg">
+                  <div className="bg-[#191B1F] px-4 sm:px-5 py-3 border-b border-white/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">2. Charges Fixes & Masse Salariale</h3>
+                    <button 
+                      onClick={addFixedExpense} 
+                      className="text-xs bg-[#8E80A8]/20 text-[#A296BB] px-3 py-1.5 rounded-lg border border-[#8E80A8]/30 font-bold hover:bg-[#8E80A8]/30 transition w-full sm:w-auto"
                     >
-                      {isSavingSummary ? 'Sauvegarde en cours...' : 'Sauvegarder le Bilan Mensuel'}
+                      + Ajouter Charge
                     </button>
                   </div>
+                  
+                  <div className="p-4 sm:p-5 space-y-3">
+                    {fixedExpenses.length === 0 && <p className="text-xs italic text-gray-500 pb-2">Aucune charge fixe enregistrée.</p>}
+                    
+                    {/* Fixed Expenses Inputs */}
+                    {fixedExpenses.map(exp => (
+                      <div key={exp.id} className="flex flex-col sm:flex-row gap-2 sm:gap-4 sm:items-center">
+                        <input
+                          type="text" 
+                          placeholder="Description (ex: Loyer, Wifi...)" 
+                          value={exp.label}
+                          onChange={e => updateFixedExpense(exp.id, 'label', e.target.value)}
+                          className="flex-1 p-2.5 rounded-xl text-sm font-semibold outline-none bg-[#191B1F] border border-white/10 text-white placeholder-gray-500 w-full"
+                        />
+                        <div className="flex gap-2 sm:gap-4 w-full sm:w-auto">
+                          <input
+                            type="number" 
+                            placeholder="Montant (MAD)" 
+                            value={exp.amount === 0 ? '' : exp.amount}
+                            onChange={e => updateFixedExpense(exp.id, 'amount', e.target.value)}
+                            className="flex-1 sm:w-36 p-2.5 rounded-xl text-sm font-semibold font-num outline-none bg-[#191B1F] border border-white/10 text-white placeholder-gray-500"
+                          />
+                          <button 
+                            onClick={() => removeFixedExpense(exp.id)} 
+                            className="p-2.5 rounded-xl font-bold transition hover:bg-white/5 text-[#B1806F] shrink-0 border border-transparent"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {/* Salaires Readonly Row */}
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 sm:p-4 bg-white/5 rounded-xl border border-white/10 mt-2 gap-2">
+                      <span className="font-semibold text-gray-300 text-sm">Salaires (Gérés dans l'onglet Salaires)</span>
+                      <span className="text-base font-bold text-gray-300 font-num">{totalBaseSalaries.toLocaleString('fr-FR')} MAD</span>
+                    </div>
+                    
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 sm:p-5 bg-red-600 rounded-xl mt-4 border border-red-500 gap-2">
+                      <span className="font-bold text-white uppercase tracking-wide text-sm sm:text-base">Total Charges Fixes & Salaires</span>
+                      <span className="text-xl sm:text-2xl font-black text-white font-num">-{totalFixedAndSalaries.toLocaleString('fr-FR')} MAD</span>
+                    </div>
+                  </div>
                 </div>
+
+                {/* SECTION 3: NET PROFIT */}
+                <div className="bg-[#115e59] border border-[#0f766e] rounded-2xl overflow-hidden shadow-2xl mt-8">
+                  <div className="p-6 md:p-8 flex flex-col md:flex-row justify-between items-center gap-6 text-center md:text-left">
+                    <div>
+                      <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-widest">Résultat Net</h3>
+                      <p className="text-[#99f6e4] text-xs md:text-sm mt-1 font-medium">Bénéfice Brut − (Charges Fixes + Salaires)</p>
+                    </div>
+                    <div className={`px-6 py-4 rounded-xl border-2 w-full md:w-auto shadow-inner ${monthlyNetProfit >= 0 ? 'bg-[#0f766e] border-[#5eead4] text-white' : 'bg-red-500/20 border-red-500 text-red-100'}`}>
+                       <span className="text-3xl md:text-4xl font-black font-num tracking-tight block">
+                         {monthlyNetProfit > 0 ? '+' : ''}{monthlyNetProfit.toLocaleString('fr-FR')} <span className="text-lg md:text-xl">MAD</span>
+                       </span>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             )}
 
@@ -1201,9 +1201,9 @@ export default function AdminDashboardPage() {
                   {(selectedClosure.inventory_logs || selectedClosure.inventory).map((i: any, idx: number) => {
                     const code = i.raw_materials?.code || i.materialCode || '';
                     const fallbackLabels: Record<string, string> = {
-                      'dinde': 'Dinde', 'vh': 'Viande Hachée', 'crispy': 'Crispy', 'mozarella': 'Mozzarella',
+                      'poulet': 'Poulet', 'vh': 'Viande Hachée', 'crispy': 'Crispy', 'mozarella': 'Mozzarella', 'mozzarella': 'Mozzarella',
                       'tortilla': 'Tortilla', 'burger': 'Pain Burger', 'soda': 'Soda', 'eau_p': 'Eau (P)', 'eau_g': 'Eau (G)',
-                      'fruit_de_mer': 'Fruits de Mer'
+                      'fruit_de_mer': 'Fruits de Mer', 'chicken_wings': 'Chicken Wings', 'legumes': 'Légumes'
                     };
                     const label = i.materialLabel || fallbackLabels[code] || code || 'Article';
 

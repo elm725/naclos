@@ -3,10 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 const CORE_STOCK_ITEMS = [
-  { code: 'dinde', label: 'Dinde', unit: 'kg' },
+  { code: 'poulet', label: 'Poulet', unit: 'kg' },
   { code: 'vh', label: 'Viande Hachée (VH)', unit: 'kg' },
   { code: 'crispy', label: 'Crispy', unit: 'kg' },
   { code: 'mozarella', label: 'Mozzarella', unit: 'kg' },
+  { code: 'chicken_wings', label: 'Chicken Wings', unit: 'kg' },
+  { code: 'legumes', label: 'Légumes', unit: 'kg' },
   { code: 'tortilla', label: 'Tortilla', unit: 'pack' },
   { code: 'burger', label: 'Pain Burger', unit: 'unit' },
   { code: 'soda', label: 'Soda', unit: 'unit' },

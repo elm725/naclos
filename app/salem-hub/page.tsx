@@ -32,7 +32,7 @@ export default function SalemHubPage() {
           className="w-full p-5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-2xl text-left transition group"
         >
           <div className="text-base font-bold text-blue-900 group-hover:text-blue-700">📦 Saisir les Approvisionnements</div>
-          <p className="text-xs text-gray-600 mt-1">Enregistrer les marchandises entrantes (Dinde, VH, Crispy...)</p>
+          <p className="text-xs text-gray-600 mt-1">Enregistrer les marchandises entrantes (Poulet, VH, Crispy...)</p>
         </button>
 
         <button
